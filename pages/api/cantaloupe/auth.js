@@ -1,5 +1,5 @@
 
-export const runtime = 'edge';
+// Removed Edge Runtime - using Node.js runtime for better Cloudflare Pages compatibility
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {

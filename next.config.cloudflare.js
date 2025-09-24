@@ -33,10 +33,7 @@ const nextConfig = {
     CANTALOUPE_MACHINE_ID: process.env.CANTALOUPE_MACHINE_ID,
   },
 
-  // Optimize for Edge Runtime
-  experimental: {
-    runtime: 'edge',
-  },
+  // Removed global Edge Runtime - using per-route configuration instead
 };
 
 module.exports = nextConfig;
