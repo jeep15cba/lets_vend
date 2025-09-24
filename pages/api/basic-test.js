@@ -1,4 +1,4 @@
-// No Edge Runtime - use Node.js runtime
+export const runtime = 'edge';
 export default async function handler(req, res) {
   try {
     return res.status(200).json({
