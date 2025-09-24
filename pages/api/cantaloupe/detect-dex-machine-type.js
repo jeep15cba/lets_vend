@@ -1,5 +1,4 @@
-import fs from 'fs';
-import path from 'path';
+// Edge Runtime doesn't support fs/path imports
 
 export const runtime = 'edge';
 
@@ -18,16 +17,40 @@ export default async function handler(req, res) {
   try {
     console.log(`Detecting machine type for DEX ID: ${dexId}, Case Serial: ${caseSerial}`);
 
-    // Load template definitions
+    // Edge Runtime doesn't support fs, use hardcoded template fallbacks
     const loadTemplate = (templateType) => {
-      try {
-        const templatePath = path.join(process.cwd(), 'data', 'templates', `dex-template-${templateType}.json`);
-        const templateData = fs.readFileSync(templatePath, 'utf8');
-        return JSON.parse(templateData);
-      } catch (error) {
-        console.warn(`Failed to load ${templateType} template:`, error.message);
-        return null;
-      }
+      // Basic template structures for Edge Runtime
+      const templates = {
+        'bev': {
+          templateType: 'bev',
+          templateVersion: '1.0',
+          description: 'Beverage machine template',
+          detectionRules: {
+            required: [
+              'hasMA5Array === true',
+              'hasCardData === true',
+              'productCount < 50'
+            ],
+            confidence: 0.8
+          },
+          metrics: {}
+        },
+        'food': {
+          templateType: 'food',
+          templateVersion: '1.0',
+          description: 'Food machine template',
+          detectionRules: {
+            required: [
+              'hasMA5Array === true',
+              'hasPA4Fields === true',
+              'averagePA2Fields >= 8'
+            ],
+            confidence: 0.8
+          },
+          metrics: {}
+        }
+      };
+      return templates[templateType] || null;
     };
 
     const bevTemplate = loadTemplate('bev');

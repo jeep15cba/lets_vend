@@ -15,24 +15,13 @@ export default async function handler(req, res) {
   try {
     console.log(`Mock DEX ID lookup for case serial: ${caseSerial}`);
 
-    // Load case serial to DEX ID mapping from file
-    let mappingData;
-    try {
-      const fs = require('fs');
-      const path = require('path');
-      const mappingPath = path.join(process.cwd(), 'data', 'case-serial-dex-mapping.json');
-      const mappingJson = fs.readFileSync(mappingPath, 'utf8');
-      mappingData = JSON.parse(mappingJson);
-    } catch (error) {
-      console.error('Error loading DEX mapping file:', error);
-      // Fallback mapping in new array format
-      mappingData = {
-        mappings: {
-          'CSA200202689': [{ dexId: '23036647', timestamp: '2025-09-24T00:00:00.000Z', firmware: '1.0.119', parsed: true }],
-          '552234133189': [{ dexId: '22995469', timestamp: '2025-09-23T00:00:00.000Z', firmware: 'unknown', parsed: true }]
-        }
-      };
-    }
+    // Edge Runtime doesn't support fs module, use hardcoded fallback mapping
+    const mappingData = {
+      mappings: {
+        'CSA200202689': [{ dexId: '23036647', timestamp: '2025-09-24T00:00:00.000Z', firmware: '1.0.119', parsed: true }],
+        '552234133189': [{ dexId: '22995469', timestamp: '2025-09-23T00:00:00.000Z', firmware: 'unknown', parsed: true }]
+      }
+    };
 
     // Look up latest DEX ID for this case serial from array format
     const dexRecords = mappingData.mappings[caseSerial];
