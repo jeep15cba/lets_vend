@@ -9,8 +9,22 @@ export default async function handler(req, res) {
   const username = process.env.CANTALOUPE_USERNAME;
   const password = process.env.CANTALOUPE_PASSWORD;
 
+  console.log('Environment check:', {
+    hasUsername: !!username,
+    hasPassword: !!password,
+    usernameLength: username ? username.length : 0,
+    environment: process.env.NODE_ENV
+  });
+
   if (!username || !password) {
-    return res.status(500).json({ error: 'Missing credentials in environment variables' });
+    return res.status(500).json({
+      error: 'Missing credentials in environment variables',
+      debug: {
+        hasUsername: !!username,
+        hasPassword: !!password,
+        environment: process.env.NODE_ENV
+      }
+    });
   }
 
   try {
