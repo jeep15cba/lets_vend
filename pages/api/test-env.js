@@ -6,27 +6,37 @@ export default async function handler(req, res) {
   }
 
   try {
-    const envCheck = {
-      hasCantaloupeUsername: !!process.env.CANTALOUPE_USERNAME,
-      hasCantaloupePassword: !!process.env.CANTALOUPE_PASSWORD,
-      hasCantaloupeMachineId: !!process.env.CANTALOUPE_MACHINE_ID,
-      nodeEnv: process.env.NODE_ENV,
+    // Test basic functionality first
+    const basicInfo = {
+      success: true,
       timestamp: new Date().toISOString(),
       runtime: 'edge'
     };
 
-    // Don't expose actual values, just check presence
-    console.log('Environment variables check:', envCheck);
+    // Try to access environment variables safely
+    let envCheck = {};
+    try {
+      envCheck = {
+        hasCantaloupeUsername: !!process.env.CANTALOUPE_USERNAME,
+        hasCantaloupePassword: !!process.env.CANTALOUPE_PASSWORD,
+        hasCantaloupeMachineId: !!process.env.CANTALOUPE_MACHINE_ID,
+        nodeEnv: process.env.NODE_ENV || 'unknown'
+      };
+    } catch (envError) {
+      envCheck = {
+        error: 'Cannot access process.env: ' + envError.message
+      };
+    }
 
-    res.status(200).json({
-      success: true,
+    return res.status(200).json({
+      ...basicInfo,
       environment: envCheck
     });
 
   } catch (error) {
-    console.error('Environment test error:', error);
-    res.status(500).json({
-      error: 'Environment test failed: ' + error.message
+    return res.status(500).json({
+      error: 'Environment test failed: ' + error.message,
+      stack: error.stack
     });
   }
 }
