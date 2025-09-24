@@ -1,0 +1,1028 @@
+{
+  "timestamp": "2025-09-24T07:33:03.567Z",
+  "note": "Complete mapping with all devices and updated with live DEX data",
+  "source": "Live data from https://dashboard.cantaloupe.online/dex API",
+  "format": "Each case serial has 'details' (static machine info) and 'dex' (dynamic DEX records)",
+  "machines": {
+    "552234133200": {
+      "details": {
+        "machineType": "food",
+        "machineModel": "VCM-4000",
+        "machineLocation": "JDR Mining and Civil",
+        "cashEnabled": true,
+        "status": "active",
+        "lastUpdated": "2025-09-24T01:57:40.000Z"
+      },
+      "dex": [
+        {
+          "dexId": "23037574",
+          "timestamp": "2025-09-24T01:57:40.000Z",
+          "firmware": "1.8.18.1",
+          "parsed": true,
+          "status": null,
+          "note": null
+        }
+      ]
+    },
+    "552234133192": {
+      "details": {
+        "machineType": "food",
+        "machineModel": "VCM-4000 SB",
+        "machineLocation": "Arthur Peterson Diversionary Centre",
+        "cashEnabled": true,
+        "status": "active",
+        "lastUpdated": "2025-09-24T01:55:16.000Z"
+      },
+      "dex": [
+        {
+          "dexId": "23037565",
+          "timestamp": "2025-09-24T01:55:16.000Z",
+          "firmware": "1.8.18.1",
+          "parsed": true,
+          "status": null,
+          "note": null
+        }
+      ]
+    },
+    "CSA200202689": {
+      "details": {
+        "machineType": "food",
+        "machineModel": "VCM-6000",
+        "machineLocation": "MIM Lease",
+        "cashEnabled": false,
+        "status": "active",
+        "lastUpdated": "2025-09-24T01:24:34.000Z"
+      },
+      "dex": [
+        {
+          "dexId": "23037246",
+          "timestamp": "2025-09-24T01:24:34.000Z",
+          "firmware": "1.0.119",
+          "parsed": true,
+          "status": null,
+          "note": null
+        }
+      ]
+    },
+    "CSA200202659": {
+      "details": {
+        "machineType": "food",
+        "machineModel": "VCM-5000 - SIII",
+        "machineLocation": "Mount Isa Airport",
+        "cashEnabled": false,
+        "status": "active",
+        "lastUpdated": "2025-09-24T01:24:30.000Z"
+      },
+      "dex": [
+        {
+          "dexId": "23037245",
+          "timestamp": "2025-09-24T01:24:30.000Z",
+          "firmware": "1.0.119",
+          "parsed": true,
+          "status": null,
+          "note": null
+        }
+      ]
+    },
+    "CSA200202679": {
+      "details": {
+        "machineType": "food",
+        "machineModel": "VCM-6000",
+        "machineLocation": "TAFE",
+        "cashEnabled": false,
+        "status": "active",
+        "lastUpdated": "2025-09-24T01:24:26.000Z"
+      },
+      "dex": [
+        {
+          "dexId": "23037244",
+          "timestamp": "2025-09-24T01:24:26.000Z",
+          "firmware": "1.0.119",
+          "parsed": true,
+          "status": null,
+          "note": null
+        }
+      ]
+    },
+    "CSA200202669": {
+      "details": {
+        "machineType": "bev",
+        "machineModel": "Royal Merlin IV - 768-9",
+        "machineLocation": "MIM Lease",
+        "cashEnabled": false,
+        "status": "active",
+        "lastUpdated": "2025-09-24T01:24:22.000Z"
+      },
+      "dex": [
+        {
+          "dexId": "23037243",
+          "timestamp": "2025-09-24T01:24:22.000Z",
+          "firmware": "1.0.119",
+          "parsed": false,
+          "status": null,
+          "note": null
+        }
+      ]
+    },
+    "CSA200202688": {
+      "details": {
+        "machineType": "bev",
+        "machineModel": "Royal Merlin IV - 542-8",
+        "machineLocation": "MIM Lease",
+        "cashEnabled": false,
+        "status": "active",
+        "lastUpdated": "2025-09-24T01:23:27.000Z"
+      },
+      "dex": [
+        {
+          "dexId": "23037238",
+          "timestamp": "2025-09-24T01:23:27.000Z",
+          "firmware": "1.0.119",
+          "parsed": false,
+          "status": null,
+          "note": null
+        }
+      ]
+    },
+    "CSA200205378": {
+      "details": {
+        "machineType": "food",
+        "machineModel": "VCM-4000",
+        "machineLocation": "JJ's Waste & Recycling",
+        "cashEnabled": true,
+        "status": "active",
+        "lastUpdated": "2025-09-24T01:23:26.000Z"
+      },
+      "dex": [
+        {
+          "dexId": "23037237",
+          "timestamp": "2025-09-24T01:23:26.000Z",
+          "firmware": "1.0.119",
+          "parsed": true,
+          "status": null,
+          "note": null
+        }
+      ]
+    },
+    "CSA200202668": {
+      "details": {
+        "machineType": "bev",
+        "machineModel": "Royal Merlin IV - 768-10",
+        "machineLocation": "GFM Lease",
+        "cashEnabled": false,
+        "status": "active",
+        "lastUpdated": "2025-09-24T01:23:19.000Z"
+      },
+      "dex": [
+        {
+          "dexId": "23037236",
+          "timestamp": "2025-09-24T01:23:19.000Z",
+          "firmware": "1.0.119",
+          "parsed": false,
+          "status": null,
+          "note": null
+        }
+      ]
+    },
+    "CSA200202678": {
+      "details": {
+        "machineType": "bev",
+        "machineModel": "Royal Merlin IV - 542-8",
+        "machineLocation": "MIM Lease",
+        "cashEnabled": false,
+        "status": "active",
+        "lastUpdated": "2025-09-24T01:23:18.000Z"
+      },
+      "dex": [
+        {
+          "dexId": "23037234",
+          "timestamp": "2025-09-24T01:23:18.000Z",
+          "firmware": "1.0.119",
+          "parsed": false,
+          "status": null,
+          "note": null
+        }
+      ]
+    },
+    "CSA200202677": {
+      "details": {
+        "machineType": "bev",
+        "machineModel": "Royal Merlin IV - 768-9",
+        "machineLocation": "MIM Lease",
+        "cashEnabled": false,
+        "status": "active",
+        "lastUpdated": "2025-09-24T01:22:27.000Z"
+      },
+      "dex": [
+        {
+          "dexId": "23037229",
+          "timestamp": "2025-09-24T01:22:27.000Z",
+          "firmware": "1.0.119",
+          "parsed": false,
+          "status": null,
+          "note": null
+        }
+      ]
+    },
+    "CSA200201037": {
+      "details": {
+        "machineType": "food",
+        "machineModel": "VCM-4000 - SIII",
+        "machineLocation": "Atom Safety",
+        "cashEnabled": false,
+        "status": "active",
+        "lastUpdated": "2025-09-24T01:22:22.000Z"
+      },
+      "dex": [
+        {
+          "dexId": "23037225",
+          "timestamp": "2025-09-24T01:22:22.000Z",
+          "firmware": "1.0.119",
+          "parsed": true,
+          "status": null,
+          "note": null
+        }
+      ]
+    },
+    "CSA200205377": {
+      "details": {
+        "machineType": "food",
+        "machineModel": "VCM-4000",
+        "machineLocation": "Hastings Deering",
+        "cashEnabled": false,
+        "status": "active",
+        "lastUpdated": "2025-09-24T01:22:20.000Z"
+      },
+      "dex": [
+        {
+          "dexId": "23037223",
+          "timestamp": "2025-09-24T01:22:20.000Z",
+          "firmware": "1.0.119",
+          "parsed": true,
+          "status": null,
+          "note": null
+        }
+      ]
+    },
+    "CSA200202657": {
+      "details": {
+        "machineType": "bev",
+        "machineModel": "Royal Merlin IV - 542-8",
+        "machineLocation": "Bell & Moir Toyota",
+        "cashEnabled": false,
+        "status": "active",
+        "lastUpdated": "2025-09-24T01:22:20.000Z"
+      },
+      "dex": [
+        {
+          "dexId": "23037224",
+          "timestamp": "2025-09-24T01:22:20.000Z",
+          "firmware": "1.0.119",
+          "parsed": false,
+          "status": null,
+          "note": null
+        }
+      ]
+    },
+    "CSA200202667": {
+      "details": {
+        "machineType": "bev",
+        "machineModel": "Royal Merlin IV - 542-8",
+        "machineLocation": "Batch Plant",
+        "cashEnabled": false,
+        "status": "active",
+        "lastUpdated": "2025-09-24T01:22:19.000Z"
+      },
+      "dex": [
+        {
+          "dexId": "23037222",
+          "timestamp": "2025-09-24T01:22:19.000Z",
+          "firmware": "1.0.119",
+          "parsed": false,
+          "status": null,
+          "note": null
+        }
+      ]
+    },
+    "CSA200202686": {
+      "details": {
+        "machineType": "food",
+        "machineModel": "VCM-6000",
+        "machineLocation": "MIM Lease",
+        "cashEnabled": false,
+        "status": "active",
+        "lastUpdated": "2025-09-24T01:21:33.000Z"
+      },
+      "dex": [
+        {
+          "dexId": "23037211",
+          "timestamp": "2025-09-24T01:21:33.000Z",
+          "firmware": "1.0.119",
+          "parsed": true,
+          "status": null,
+          "note": null
+        }
+      ]
+    },
+    "CSA200202666": {
+      "details": {
+        "machineType": "food",
+        "machineModel": "VCM-3000",
+        "machineLocation": "Team Global Express",
+        "cashEnabled": false,
+        "status": "active",
+        "lastUpdated": "2025-09-24T01:21:29.000Z"
+      },
+      "dex": [
+        {
+          "dexId": "23037210",
+          "timestamp": "2025-09-24T01:21:29.000Z",
+          "firmware": "1.0.119",
+          "parsed": true,
+          "status": null,
+          "note": null
+        }
+      ]
+    },
+    "CSA200205376": {
+      "details": {
+        "machineType": "food",
+        "machineModel": "VCM-5000 SB",
+        "machineLocation": "IDC Warehouse",
+        "cashEnabled": false,
+        "status": "active",
+        "lastUpdated": "2025-09-24T01:21:25.000Z"
+      },
+      "dex": [
+        {
+          "dexId": "23037208",
+          "timestamp": "2025-09-24T01:21:25.000Z",
+          "firmware": "1.0.119",
+          "parsed": true,
+          "status": null,
+          "note": null
+        }
+      ]
+    },
+    "CSA200202656": {
+      "details": {
+        "machineType": "bev",
+        "machineModel": "Royal Merlin IV - 542-8",
+        "machineLocation": "Followmont Transport",
+        "cashEnabled": false,
+        "status": "active",
+        "lastUpdated": "2025-09-24T01:21:22.000Z"
+      },
+      "dex": [
+        {
+          "dexId": "23037207",
+          "timestamp": "2025-09-24T01:21:22.000Z",
+          "firmware": "1.0.119",
+          "parsed": false,
+          "status": null,
+          "note": null
+        }
+      ]
+    },
+    "CSA200205375": {
+      "details": {
+        "machineType": "food",
+        "machineModel": "VCM-4000",
+        "machineLocation": "Isadraulics",
+        "cashEnabled": false,
+        "status": "active",
+        "lastUpdated": "2025-09-24T01:20:31.000Z"
+      },
+      "dex": [
+        {
+          "dexId": "23037204",
+          "timestamp": "2025-09-24T01:20:31.000Z",
+          "firmware": "1.0.119",
+          "parsed": true,
+          "status": null,
+          "note": null
+        }
+      ]
+    },
+    "CSA200202665": {
+      "details": {
+        "machineType": "food",
+        "machineModel": "VCM-4000",
+        "machineLocation": "Malouf Ford",
+        "cashEnabled": false,
+        "status": "active",
+        "lastUpdated": "2025-09-24T01:20:26.000Z"
+      },
+      "dex": [
+        {
+          "dexId": "23037203",
+          "timestamp": "2025-09-24T01:20:26.000Z",
+          "firmware": "1.0.119",
+          "parsed": true,
+          "status": null,
+          "note": null
+        }
+      ]
+    },
+    "CSA200202655": {
+      "details": {
+        "machineType": "bev",
+        "machineModel": "Royal Merlin IV - 542-8",
+        "machineLocation": "Spinifex Senior College",
+        "cashEnabled": false,
+        "status": "active",
+        "lastUpdated": "2025-09-24T01:20:24.000Z"
+      },
+      "dex": [
+        {
+          "dexId": "23037202",
+          "timestamp": "2025-09-24T01:20:24.000Z",
+          "firmware": "1.0.119",
+          "parsed": false,
+          "status": null,
+          "note": null
+        }
+      ]
+    },
+    "CSA200202675": {
+      "details": {
+        "machineType": "bev",
+        "machineModel": "Royal Merlin IV - 768-9",
+        "machineLocation": "MIM Lease",
+        "cashEnabled": false,
+        "status": "active",
+        "lastUpdated": "2025-09-24T01:20:21.000Z"
+      },
+      "dex": [
+        {
+          "dexId": "23037200",
+          "timestamp": "2025-09-24T01:20:21.000Z",
+          "firmware": "1.0.119",
+          "parsed": false,
+          "status": null,
+          "note": null
+        }
+      ]
+    },
+    "CSA200202685": {
+      "details": {
+        "machineType": "food",
+        "machineModel": "BV3",
+        "machineLocation": "Mount Isa City Council Staff Room",
+        "cashEnabled": false,
+        "status": "active",
+        "lastUpdated": "2025-09-24T01:20:20.000Z"
+      },
+      "dex": [
+        {
+          "dexId": "23037199",
+          "timestamp": "2025-09-24T01:20:20.000Z",
+          "firmware": "1.0.119",
+          "parsed": true,
+          "status": null,
+          "note": null
+        }
+      ]
+    },
+    "CSA200205534": {
+      "details": {
+        "machineType": "food",
+        "machineModel": "VCM-4000 SB",
+        "machineLocation": "Kabalulumana Hostel",
+        "cashEnabled": true,
+        "status": "active",
+        "lastUpdated": "2025-09-24T01:19:37.000Z"
+      },
+      "dex": [
+        {
+          "dexId": "23037196",
+          "timestamp": "2025-09-24T01:19:37.000Z",
+          "firmware": "1.0.119",
+          "parsed": true,
+          "status": null,
+          "note": null
+        }
+      ]
+    },
+    "CSA200205616": {
+      "details": {
+        "machineType": "bev",
+        "machineModel": "Royal Merlin IV - 768-9",
+        "machineLocation": "TAFE",
+        "cashEnabled": false,
+        "status": "active",
+        "lastUpdated": "2025-09-24T02:21:28.000Z"
+      },
+      "dex": [
+        {
+          "dexId": "23040339",
+          "timestamp": "2025-09-24T02:21:28.000Z",
+          "firmware": "1.0.119",
+          "parsed": false,
+          "status": null,
+          "note": null
+        }
+      ]
+    },
+    "552234133189": {
+      "details": {
+        "machineType": "bev",
+        "machineModel": "Royal Merlin IV - 768-10",
+        "machineLocation": "North West Hospital and Health Service",
+        "cashEnabled": true,
+        "status": "active",
+        "lastUpdated": "2025-09-24T07:33:03.567Z"
+      },
+      "dex": [
+        {
+          "dexId": "23051186",
+          "timestamp": "2025-09-23T21:02:45.000Z",
+          "firmware": "1.8.18.1",
+          "parsed": false,
+          "status": null,
+          "note": "Added from live DEX mapping"
+        }
+      ]
+    },
+    "552234133191": {
+      "details": {
+        "machineType": "food",
+        "machineModel": "VCM-4000 SB",
+        "machineLocation": "Jimaylya Topsy Harry Center",
+        "cashEnabled": true,
+        "status": "active",
+        "lastUpdated": "2025-09-24T07:33:03.567Z"
+      },
+      "dex": [
+        {
+          "dexId": "23051215",
+          "timestamp": "2025-09-23T21:09:24.000Z",
+          "firmware": "1.8.18.1",
+          "parsed": true,
+          "status": null,
+          "note": "Added from live DEX mapping"
+        }
+      ]
+    },
+    "552234133194": {
+      "details": {
+        "machineType": "food",
+        "machineModel": "VCM-4000",
+        "machineLocation": "Queensland Rail",
+        "cashEnabled": true,
+        "status": "active",
+        "lastUpdated": "2025-09-24T07:33:03.567Z"
+      },
+      "dex": [
+        {
+          "dexId": "23051185",
+          "timestamp": "2025-09-23T21:02:16.000Z",
+          "firmware": "1.8.18.1",
+          "parsed": true,
+          "status": null,
+          "note": "Added from live DEX mapping"
+        }
+      ]
+    },
+    "552234133195": {
+      "details": {
+        "machineType": "food",
+        "machineModel": "VCM-4000 - SIII",
+        "machineLocation": "Mount Isa Courthouse",
+        "cashEnabled": true,
+        "status": "active",
+        "lastUpdated": "2025-09-24T07:33:03.567Z"
+      },
+      "dex": [
+        {
+          "dexId": "23051222",
+          "timestamp": "2025-09-23T21:11:11.000Z",
+          "firmware": "1.8.18.1",
+          "parsed": true,
+          "status": null,
+          "note": "Added from live DEX mapping"
+        }
+      ]
+    },
+    "552234133196": {
+      "details": {
+        "machineType": "food",
+        "machineModel": "VCM-4000 - SIII",
+        "machineLocation": "Library",
+        "cashEnabled": true,
+        "status": "active",
+        "lastUpdated": "2025-09-24T07:33:03.567Z"
+      },
+      "dex": [
+        {
+          "dexId": "23051202",
+          "timestamp": "2025-09-23T21:07:02.000Z",
+          "firmware": "1.8.18.1",
+          "parsed": true,
+          "status": null,
+          "note": "Added from live DEX mapping"
+        }
+      ]
+    },
+    "552234133306": {
+      "details": {
+        "machineType": "food",
+        "machineModel": "BV3",
+        "machineLocation": "Isawash Laundromat",
+        "cashEnabled": true,
+        "status": "active",
+        "lastUpdated": "2025-09-24T07:33:03.567Z"
+      },
+      "dex": [
+        {
+          "dexId": "23051227",
+          "timestamp": "2025-09-23T21:11:47.000Z",
+          "firmware": "1.8.18.1",
+          "parsed": true,
+          "status": null,
+          "note": "Added from live DEX mapping"
+        }
+      ]
+    },
+    "CSA200202661": {
+      "details": {
+        "machineType": "bev",
+        "machineModel": "Royal Merlin IV - 542-8",
+        "machineLocation": "Spinifex Junior College",
+        "cashEnabled": false,
+        "status": "active",
+        "lastUpdated": "2025-09-24T07:33:03.567Z"
+      },
+      "dex": [
+        {
+          "dexId": "23051244",
+          "timestamp": "2025-09-23T21:16:14.000Z",
+          "firmware": "1.0.119",
+          "parsed": false,
+          "status": null,
+          "note": "Added from live DEX mapping"
+        }
+      ]
+    },
+    "CSA200202662": {
+      "details": {
+        "machineType": "bev",
+        "machineModel": "Royal Merlin IV - 542-9",
+        "machineLocation": "GFM Lease",
+        "cashEnabled": false,
+        "status": "active",
+        "lastUpdated": "2025-09-24T07:33:03.567Z"
+      },
+      "dex": [
+        {
+          "dexId": "23047800",
+          "timestamp": "2025-09-23T20:17:16.000Z",
+          "firmware": "1.0.119",
+          "parsed": false,
+          "status": null,
+          "note": "Added from live DEX mapping"
+        }
+      ]
+    },
+    "CSA200202654": {
+      "details": {
+        "machineType": "bev",
+        "machineModel": "Royal Merlin IV - 542-9",
+        "machineLocation": "MIM Lease",
+        "cashEnabled": false,
+        "status": "active",
+        "lastUpdated": "2025-09-24T07:33:03.567Z"
+      },
+      "dex": [
+        {
+          "dexId": "23048702",
+          "timestamp": "2025-09-23T20:19:26.000Z",
+          "firmware": "1.0.119",
+          "parsed": false,
+          "status": null,
+          "note": "Added from live DEX mapping"
+        }
+      ]
+    },
+    "CSA200202691": {
+      "details": {
+        "machineType": "bev",
+        "machineModel": "Royal Merlin IV - 542-8",
+        "machineLocation": "Cava Workshop",
+        "cashEnabled": false,
+        "status": "active",
+        "lastUpdated": "2025-09-24T07:33:03.567Z"
+      },
+      "dex": [
+        {
+          "dexId": "23051245",
+          "timestamp": "2025-09-23T21:16:14.000Z",
+          "firmware": "1.0.119",
+          "parsed": false,
+          "status": null,
+          "note": "Added from live DEX mapping"
+        }
+      ]
+    },
+    "CSA200202692": {
+      "details": {
+        "machineType": "bev",
+        "machineModel": "Royal Merlin IV - 768-9",
+        "machineLocation": "GFM Lease",
+        "cashEnabled": false,
+        "status": "active",
+        "lastUpdated": "2025-09-24T07:33:03.567Z"
+      },
+      "dex": [
+        {
+          "dexId": "23047986",
+          "timestamp": "2025-09-23T20:17:29.000Z",
+          "firmware": "1.0.119",
+          "parsed": false,
+          "status": null,
+          "note": "Added from live DEX mapping"
+        }
+      ]
+    },
+    "CSA200202653": {
+      "details": {
+        "machineType": "bev",
+        "machineModel": "Royal Merlin IV - 542-8",
+        "machineLocation": "TAFE",
+        "cashEnabled": false,
+        "status": "active",
+        "lastUpdated": "2025-09-24T07:33:03.567Z"
+      },
+      "dex": [
+        {
+          "dexId": "23048205",
+          "timestamp": "2025-09-23T20:18:18.000Z",
+          "firmware": "1.0.119",
+          "parsed": false,
+          "status": null,
+          "note": "Added from live DEX mapping"
+        }
+      ]
+    },
+    "CSA200204452": {
+      "details": {
+        "machineType": "bev",
+        "machineModel": "Royal Merlin IV - 768-10",
+        "machineLocation": "Mount Isa Airport",
+        "cashEnabled": false,
+        "status": "active",
+        "lastUpdated": "2025-09-24T07:33:03.567Z"
+      },
+      "dex": [
+        {
+          "dexId": "23047797",
+          "timestamp": "2025-09-23T20:17:15.000Z",
+          "firmware": "1.0.119",
+          "parsed": false,
+          "status": null,
+          "note": "Added from live DEX mapping"
+        }
+      ]
+    },
+    "CSA200202674": {
+      "details": {
+        "machineType": "food",
+        "machineModel": "VCM-5000",
+        "machineLocation": "Skills Center",
+        "cashEnabled": false,
+        "status": "active",
+        "lastUpdated": "2025-09-24T07:33:03.567Z"
+      },
+      "dex": [
+        {
+          "dexId": "23048655",
+          "timestamp": "2025-09-23T20:19:23.000Z",
+          "firmware": "1.0.119",
+          "parsed": true,
+          "status": null,
+          "note": "Added from live DEX mapping"
+        }
+      ]
+    },
+    "CSA200202670": {
+      "details": {
+        "machineType": "food",
+        "machineModel": "VCM-5000",
+        "machineLocation": "GFM Lease",
+        "cashEnabled": false,
+        "status": "active",
+        "lastUpdated": "2025-09-24T07:33:03.567Z"
+      },
+      "dex": [
+        {
+          "dexId": "23051240",
+          "timestamp": "2025-09-23T21:15:32.000Z",
+          "firmware": "1.0.119",
+          "parsed": true,
+          "status": null,
+          "note": "Added from live DEX mapping"
+        }
+      ]
+    },
+    "CSA200202680": {
+      "details": {
+        "machineType": "food",
+        "machineModel": "BV5",
+        "machineLocation": "MIM Lease",
+        "cashEnabled": false,
+        "status": "active",
+        "lastUpdated": "2025-09-24T07:33:03.567Z"
+      },
+      "dex": [
+        {
+          "dexId": "23051241",
+          "timestamp": "2025-09-23T21:15:35.000Z",
+          "firmware": "1.0.119",
+          "parsed": true,
+          "status": null,
+          "note": "Added from live DEX mapping"
+        }
+      ]
+    },
+    "CSA200202681": {
+      "details": {
+        "machineType": "food",
+        "machineModel": "BV5",
+        "machineLocation": "Hastings Deering",
+        "cashEnabled": false,
+        "status": "active",
+        "lastUpdated": "2025-09-24T07:33:03.567Z"
+      },
+      "dex": [
+        {
+          "dexId": "23047697",
+          "timestamp": "2025-09-23T20:16:35.000Z",
+          "firmware": "1.0.119",
+          "parsed": true,
+          "status": null,
+          "note": "Added from live DEX mapping"
+        }
+      ]
+    },
+    "CSA200202660": {
+      "details": {
+        "machineType": "food",
+        "machineModel": "VCM-6000",
+        "machineLocation": "GFM Lease",
+        "cashEnabled": false,
+        "status": "active",
+        "lastUpdated": "2025-09-24T07:33:03.567Z"
+      },
+      "dex": [
+        {
+          "dexId": "23051239",
+          "timestamp": "2025-09-23T21:15:28.000Z",
+          "firmware": "1.0.119",
+          "parsed": true,
+          "status": null,
+          "note": "Added from live DEX mapping"
+        }
+      ]
+    },
+    "CSA200202690": {
+      "details": {
+        "machineType": "food",
+        "machineModel": "VCM-3000",
+        "machineLocation": "New Nation Fitness",
+        "cashEnabled": false,
+        "status": "active",
+        "lastUpdated": "2025-09-24T07:33:03.567Z"
+      },
+      "dex": [
+        {
+          "dexId": "23051236",
+          "timestamp": "2025-09-23T21:15:19.000Z",
+          "firmware": "1.0.119",
+          "parsed": true,
+          "status": null,
+          "note": "Added from live DEX mapping"
+        }
+      ]
+    },
+    "CSA200204043": {
+      "details": {
+        "machineType": "food",
+        "machineModel": "VCM-4000 - SIII",
+        "machineLocation": "Sandvik Mining and Rock Technology",
+        "cashEnabled": false,
+        "status": "active",
+        "lastUpdated": "2025-09-24T07:33:03.567Z"
+      },
+      "dex": [
+        {
+          "dexId": "23048280",
+          "timestamp": "2025-09-23T20:18:23.000Z",
+          "firmware": "1.0.119",
+          "parsed": true,
+          "status": null,
+          "note": "Added from live DEX mapping"
+        }
+      ]
+    },
+    "CSA200202672": {
+      "details": {
+        "machineType": "food",
+        "machineModel": "VCM-5000 - SIII",
+        "machineLocation": "ibis Styles Mount Isa",
+        "cashEnabled": false,
+        "status": "active",
+        "lastUpdated": "2025-09-24T07:33:03.567Z"
+      },
+      "dex": [
+        {
+          "dexId": "23047848",
+          "timestamp": "2025-09-23T20:17:21.000Z",
+          "firmware": "1.0.119",
+          "parsed": true,
+          "status": null,
+          "note": "Added from live DEX mapping"
+        }
+      ]
+    },
+    "CSA200202673": {
+      "details": {
+        "machineType": "food",
+        "machineModel": "VCM-4000 SB",
+        "machineLocation": "MIM Lease",
+        "cashEnabled": false,
+        "status": "active",
+        "lastUpdated": "2025-09-24T07:33:03.567Z"
+      },
+      "dex": [
+        {
+          "dexId": "23048233",
+          "timestamp": "2025-09-23T20:18:20.000Z",
+          "firmware": "1.0.119",
+          "parsed": true,
+          "status": null,
+          "note": "Added from live DEX mapping"
+        }
+      ]
+    },
+    "CSA200202671": {
+      "details": {
+        "machineType": "food",
+        "machineModel": "VCM-4000 SB",
+        "machineLocation": "Brodie Germain Fitness",
+        "cashEnabled": false,
+        "status": "active",
+        "lastUpdated": "2025-09-24T07:33:03.567Z"
+      },
+      "dex": [
+        {
+          "dexId": "23047463",
+          "timestamp": "2025-09-23T20:16:19.000Z",
+          "firmware": "1.0.119",
+          "parsed": true,
+          "status": null,
+          "note": "Added from live DEX mapping"
+        }
+      ]
+    },
+    "CSA200202683": {
+      "details": {
+        "machineType": "food",
+        "machineModel": "VCM-4000 SB",
+        "machineLocation": "Orica Mount Isa",
+        "cashEnabled": false,
+        "status": "active",
+        "lastUpdated": "2025-09-24T07:33:03.567Z"
+      },
+      "dex": [
+        {
+          "dexId": "23048413",
+          "timestamp": "2025-09-23T20:18:32.000Z",
+          "firmware": "1.0.119",
+          "parsed": true,
+          "status": null,
+          "note": "Added from live DEX mapping"
+        }
+      ]
+    },
+    "CSA200202664": {
+      "details": {
+        "machineType": "food",
+        "machineModel": "VCM-5000 SII",
+        "machineLocation": "Mount Isa Airport",
+        "cashEnabled": false,
+        "status": "active",
+        "lastUpdated": "2025-09-24T07:33:03.567Z"
+      },
+      "dex": [
+        {
+          "dexId": "23048822",
+          "timestamp": "2025-09-23T20:19:35.000Z",
+          "firmware": "1.0.119",
+          "parsed": true,
+          "status": null,
+          "note": "Added from live DEX mapping"
+        }
+      ]
+    }
+  }
+}

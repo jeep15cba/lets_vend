@@ -1,0 +1,196 @@
+{
+  "templateType": "food",
+  "templateVersion": "1.0",
+  "description": "Food/snack vending machine DEX data template",
+  "characteristics": {
+    "hasMA5Array": false,
+    "hasCardData": false,
+    "hasSelectionMapping": false,
+    "hasRefrigeration": false,
+    "typicalProductCount": "> 20 (typically 70+)",
+    "hasPA4Fields": true,
+    "averagePA2Fields": ">= 8",
+    "cashHandlingCapable": "common",
+    "hasCA17": "frequently present for cash-enabled machines"
+  },
+  "structure": {
+    "general": {
+      "required": ["ID1", "BA1", "CA1", "CA2"],
+      "optional": ["VA1", "MA5", "CA17", "EA1", "EA2", "EA3", "EA4", "EA5", "EA6", "EA7", "EA8", "EA9"],
+      "ID1": {
+        "description": "Machine identification",
+        "patterns": ["3023", "3000"],
+        "fields": {
+          "1": "Machine ID string",
+          "2": "Machine type code (e.g., '3000')"
+        }
+      },
+      "BA1": {
+        "description": "Bill acceptor data",
+        "fields": {
+          "1": "Bill revenue (cents)",
+          "2": "Bill count"
+        }
+      },
+      "CA1": {
+        "description": "Cash box data",
+        "fields": {
+          "1": "Cash amount (cents)",
+          "2": "Cash count"
+        }
+      },
+      "CA2": {
+        "description": "Cash sales data",
+        "fields": {
+          "1": "Cash revenue (cents)",
+          "2": "Cash sales count"
+        }
+      },
+      "CA17": {
+        "description": "Cash handling data (commonly present in cash-enabled food machines)",
+        "fields": {
+          "1": "Cash denominations/types",
+          "2": "Cash amounts",
+          "3": "Cash counts",
+          "4": "Cash handling status",
+          "5": "Additional cash data"
+        }
+      },
+      "MA5": {
+        "description": "Machine configuration array (if present)",
+        "temperatureHandling": {
+          "conversionFactor": "divide by 100 (400 = 4.0°C)",
+          "displayLabel": "Food Temperature"
+        },
+        "expectedItems": [
+          {"1": "DESIRED TEMPERATURE", "2": "temperature_value_raw", "3": "C", "display": "Target temperature"},
+          {"1": "DETECTED TEMPERATURE", "2": "temperature_value_raw", "3": "C", "display": "Current temperature"}
+        ]
+      },
+      "EA1": {
+        "description": "Most recent error (Error Activity 1)",
+        "errorLevel": "current",
+        "fields": {
+          "1": "Error code",
+          "2": "Date (DDMMYY format)",
+          "3": "Time (HHMM format)",
+          "5": "Additional error data (optional)",
+          "6": "Additional error data (optional)"
+        }
+      },
+      "EA2-EA9": {
+        "description": "Historical errors (EA2 = second most recent, etc.)",
+        "errorLevel": "historical",
+        "priority": "EA1 > EA2 > EA3 > ... > EA9 (most recent to oldest)",
+        "fields": "Same structure as EA1"
+      }
+    },
+    "products": {
+      "description": "Product-specific sales data",
+      "typicalCount": 70,
+      "structure": {
+        "PA1": {
+          "description": "Product identification",
+          "fields": {
+            "1": "Product ID/Selection number"
+          }
+        },
+        "PA2": {
+          "description": "Product sales data (extensive)",
+          "fields": {
+            "1": "Sales count",
+            "2": "Revenue (cents)",
+            "3": "Price (cents)",
+            "4": "Additional field 1",
+            "5": "Additional field 2",
+            "6": "Additional field 3",
+            "7": "Additional field 4",
+            "8": "Additional field 5",
+            "9": "Additional field 6",
+            "10": "Additional field 7",
+            "11": "Additional field 8"
+          }
+        },
+        "PA4": {
+          "description": "Extended product configuration data",
+          "expected": true,
+          "fields": {
+            "1": "Product configuration field 1",
+            "2": "Product configuration field 2"
+          }
+        }
+      }
+    }
+  },
+  "metrics": {
+    "totalSales": "calculated from products PA2.1 sum",
+    "totalRevenue": "calculated from products PA2.2 sum",
+    "cashSales": "CA2.2",
+    "cardSales": "calculated separately if available",
+    "activeProducts": "products with PA2.1 > 0",
+    "temperatureDesired": "MA5 item where 1='DESIRED TEMPERATURE'",
+    "temperatureDetected": "MA5 item where 1='DETECTED TEMPERATURE'",
+    "cashHandling": "CA17 field data if machine is cash-enabled",
+    "errorHandling": "Food machines use EA1-EA9 fields for error tracking (EA1 = most recent, higher numbers = older)",
+    "currentErrors": "EA1 field contains most recent error",
+    "errorHistory": "EA2-EA9 contain historical errors (EA2 = second most recent, etc.)",
+    "errorCodes": "EA fields contain error codes in field 1, dates in field 2, times in field 3"
+  },
+  "detectionRules": {
+    "required": [
+      "hasMA5Array === false OR !hasCardData",
+      "productCount > 20",
+      "hasPA4Fields === true",
+      "averagePA2Fields >= 8"
+    ],
+    "confidence": 0.85
+  },
+  "sampleData": {
+    "general": {
+      "ID1": {"1": "FOOD_Machine_3023", "2": "3000"},
+      "BA1": {"1": "75000", "2": "300"},
+      "CA1": {"1": "100000", "2": "400"},
+      "CA2": {"1": "95000", "2": "380"},
+      "MA5": [
+        {"1": "DESIRED TEMPERATURE", "2": "  400", "3": "C"},
+        {"1": "DETECTED TEMPERATURE", "2": "  400", "3": "C"}
+      ]
+    },
+    "products": [
+      {
+        "PA1": {"1": "A1"},
+        "PA2": {
+          "1": "25",
+          "2": "3750",
+          "3": "150",
+          "4": "0",
+          "5": "0",
+          "6": "0",
+          "7": "0",
+          "8": "0",
+          "9": "25",
+          "10": "3750",
+          "11": "0"
+        },
+        "PA4": {"1": "ENABLED", "2": "NORMAL"}
+      },
+      {
+        "PA1": {"1": "A2"},
+        "PA2": {
+          "1": "15",
+          "2": "2250",
+          "3": "150",
+          "4": "0",
+          "5": "0",
+          "6": "0",
+          "7": "0",
+          "8": "0",
+          "9": "15",
+          "10": "2250",
+          "11": "0"
+        },
+        "PA4": {"1": "ENABLED", "2": "NORMAL"}
+      }
+    ]
+  }
+}

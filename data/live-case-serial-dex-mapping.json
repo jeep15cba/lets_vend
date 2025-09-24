@@ -1,0 +1,472 @@
+{
+  "timestamp": "2025-09-24T07:16:22.703Z",
+  "note": "Complete case serial to DEX ID mapping from live Cantaloupe API",
+  "source": "https://dashboard.cantaloupe.online/dex/getData",
+  "stats": {
+    "totalDexRecords": 707,
+    "uniqueMachines": 51,
+    "ourMachinesMatched": 51,
+    "ourMachinesTotal": 51
+  },
+  "mapping": {
+    "CSA200202661": {
+      "dexId": "23051244",
+      "timestamp": "2025-09-24 07:16:14",
+      "firmware": "1.0.119",
+      "parsed": false,
+      "preprocessed": false,
+      "uploadReason": 0,
+      "customer": "Isavend"
+    },
+    "CSA200202691": {
+      "dexId": "23051245",
+      "timestamp": "2025-09-24 07:16:14",
+      "firmware": "1.0.119",
+      "parsed": false,
+      "preprocessed": false,
+      "uploadReason": 0,
+      "customer": "Isavend"
+    },
+    "CSA200202680": {
+      "dexId": "23051241",
+      "timestamp": "2025-09-24 07:15:35",
+      "firmware": "1.0.119",
+      "parsed": true,
+      "preprocessed": true,
+      "uploadReason": 0,
+      "customer": "Isavend"
+    },
+    "CSA200202670": {
+      "dexId": "23051240",
+      "timestamp": "2025-09-24 07:15:32",
+      "firmware": "1.0.119",
+      "parsed": true,
+      "preprocessed": true,
+      "uploadReason": 0,
+      "customer": "Isavend"
+    },
+    "CSA200202660": {
+      "dexId": "23051239",
+      "timestamp": "2025-09-24 07:15:28",
+      "firmware": "1.0.119",
+      "parsed": true,
+      "preprocessed": true,
+      "uploadReason": 0,
+      "customer": "Isavend"
+    },
+    "CSA200202690": {
+      "dexId": "23051236",
+      "timestamp": "2025-09-24 07:15:19",
+      "firmware": "1.0.119",
+      "parsed": true,
+      "preprocessed": true,
+      "uploadReason": 0,
+      "customer": "Isavend"
+    },
+    "552234133306": {
+      "dexId": "23051227",
+      "timestamp": "2025-09-24 07:11:47",
+      "firmware": "1.8.18.1",
+      "parsed": true,
+      "preprocessed": true,
+      "uploadReason": 0,
+      "customer": "Isavend"
+    },
+    "552234133195": {
+      "dexId": "23051222",
+      "timestamp": "2025-09-24 07:11:11",
+      "firmware": "1.8.18.1",
+      "parsed": true,
+      "preprocessed": true,
+      "uploadReason": 0,
+      "customer": "Isavend"
+    },
+    "552234133191": {
+      "dexId": "23051215",
+      "timestamp": "2025-09-24 07:09:24",
+      "firmware": "1.8.18.1",
+      "parsed": true,
+      "preprocessed": true,
+      "uploadReason": 0,
+      "customer": "Isavend"
+    },
+    "552234133196": {
+      "dexId": "23051202",
+      "timestamp": "2025-09-24 07:07:02",
+      "firmware": "1.8.18.1",
+      "parsed": true,
+      "preprocessed": true,
+      "uploadReason": 0,
+      "customer": "Isavend"
+    },
+    "552234133189": {
+      "dexId": "23051186",
+      "timestamp": "2025-09-24 07:02:45",
+      "firmware": "1.8.18.1",
+      "parsed": false,
+      "preprocessed": true,
+      "uploadReason": 0,
+      "customer": "Isavend"
+    },
+    "552234133194": {
+      "dexId": "23051185",
+      "timestamp": "2025-09-24 07:02:16",
+      "firmware": "1.8.18.1",
+      "parsed": true,
+      "preprocessed": true,
+      "uploadReason": 0,
+      "customer": "Isavend"
+    },
+    "552234133200": {
+      "dexId": "23051170",
+      "timestamp": "2025-09-24 06:57:50",
+      "firmware": "1.8.18.1",
+      "parsed": true,
+      "preprocessed": true,
+      "uploadReason": 0,
+      "customer": "Isavend"
+    },
+    "552234133192": {
+      "dexId": "23051162",
+      "timestamp": "2025-09-24 06:55:22",
+      "firmware": "1.8.18.1",
+      "parsed": true,
+      "preprocessed": true,
+      "uploadReason": 0,
+      "customer": "Isavend"
+    },
+    "CSA200202679": {
+      "dexId": "23050732",
+      "timestamp": "2025-09-24 06:24:35",
+      "firmware": "1.0.119",
+      "parsed": true,
+      "preprocessed": true,
+      "uploadReason": 0,
+      "customer": "Isavend"
+    },
+    "CSA200202689": {
+      "dexId": "23050643",
+      "timestamp": "2025-09-24 06:24:28",
+      "firmware": "1.0.119",
+      "parsed": true,
+      "preprocessed": true,
+      "uploadReason": 0,
+      "customer": "Isavend"
+    },
+    "CSA200202659": {
+      "dexId": "23050633",
+      "timestamp": "2025-09-24 06:24:27",
+      "firmware": "1.0.119",
+      "parsed": true,
+      "preprocessed": true,
+      "uploadReason": 0,
+      "customer": "Isavend"
+    },
+    "CSA200202669": {
+      "dexId": "23050511",
+      "timestamp": "2025-09-24 06:24:20",
+      "firmware": "1.0.119",
+      "parsed": false,
+      "preprocessed": true,
+      "uploadReason": 0,
+      "customer": "Isavend"
+    },
+    "CSA200202678": {
+      "dexId": "23050253",
+      "timestamp": "2025-09-24 06:23:27",
+      "firmware": "1.0.119",
+      "parsed": false,
+      "preprocessed": true,
+      "uploadReason": 0,
+      "customer": "Isavend"
+    },
+    "CSA200202688": {
+      "dexId": "23050231",
+      "timestamp": "2025-09-24 06:23:26",
+      "firmware": "1.0.119",
+      "parsed": false,
+      "preprocessed": true,
+      "uploadReason": 0,
+      "customer": "Isavend"
+    },
+    "CSA200205378": {
+      "dexId": "23050224",
+      "timestamp": "2025-09-24 06:23:25",
+      "firmware": "1.0.119",
+      "parsed": true,
+      "preprocessed": true,
+      "uploadReason": 0,
+      "customer": "Isavend"
+    },
+    "CSA200202668": {
+      "dexId": "23050195",
+      "timestamp": "2025-09-24 06:23:24",
+      "firmware": "1.0.119",
+      "parsed": false,
+      "preprocessed": true,
+      "uploadReason": 0,
+      "customer": "Isavend"
+    },
+    "CSA200205377": {
+      "dexId": "23049855",
+      "timestamp": "2025-09-24 06:22:26",
+      "firmware": "1.0.119",
+      "parsed": true,
+      "preprocessed": true,
+      "uploadReason": 0,
+      "customer": "Isavend"
+    },
+    "CSA200201037": {
+      "dexId": "23049852",
+      "timestamp": "2025-09-24 06:22:26",
+      "firmware": "1.0.119",
+      "parsed": true,
+      "preprocessed": true,
+      "uploadReason": 0,
+      "customer": "Isavend"
+    },
+    "CSA200202677": {
+      "dexId": "23049776",
+      "timestamp": "2025-09-24 06:22:22",
+      "firmware": "1.0.119",
+      "parsed": false,
+      "preprocessed": true,
+      "uploadReason": 0,
+      "customer": "Isavend"
+    },
+    "CSA200202657": {
+      "dexId": "23049708",
+      "timestamp": "2025-09-24 06:22:16",
+      "firmware": "1.0.119",
+      "parsed": false,
+      "preprocessed": true,
+      "uploadReason": 0,
+      "customer": "Isavend"
+    },
+    "CSA200202667": {
+      "dexId": "23049694",
+      "timestamp": "2025-09-24 06:22:14",
+      "firmware": "1.0.119",
+      "parsed": false,
+      "preprocessed": true,
+      "uploadReason": 0,
+      "customer": "Isavend"
+    },
+    "CSA200205616": {
+      "dexId": "23049607",
+      "timestamp": "2025-09-24 06:21:35",
+      "firmware": "1.0.119",
+      "parsed": false,
+      "preprocessed": true,
+      "uploadReason": 0,
+      "customer": "Isavend"
+    },
+    "CSA200202686": {
+      "dexId": "23049590",
+      "timestamp": "2025-09-24 06:21:33",
+      "firmware": "1.0.119",
+      "parsed": true,
+      "preprocessed": true,
+      "uploadReason": 0,
+      "customer": "Isavend"
+    },
+    "CSA200205376": {
+      "dexId": "23049513",
+      "timestamp": "2025-09-24 06:21:28",
+      "firmware": "1.0.119",
+      "parsed": true,
+      "preprocessed": true,
+      "uploadReason": 0,
+      "customer": "Isavend"
+    },
+    "CSA200202666": {
+      "dexId": "23049416",
+      "timestamp": "2025-09-24 06:21:23",
+      "firmware": "1.0.119",
+      "parsed": true,
+      "preprocessed": true,
+      "uploadReason": 0,
+      "customer": "Isavend"
+    },
+    "CSA200202656": {
+      "dexId": "23049383",
+      "timestamp": "2025-09-24 06:21:21",
+      "firmware": "1.0.119",
+      "parsed": false,
+      "preprocessed": true,
+      "uploadReason": 0,
+      "customer": "Isavend"
+    },
+    "CSA200202685": {
+      "dexId": "23049201",
+      "timestamp": "2025-09-24 06:20:32",
+      "firmware": "1.0.119",
+      "parsed": true,
+      "preprocessed": true,
+      "uploadReason": 0,
+      "customer": "Isavend"
+    },
+    "CSA200202665": {
+      "dexId": "23049195",
+      "timestamp": "2025-09-24 06:20:32",
+      "firmware": "1.0.119",
+      "parsed": true,
+      "preprocessed": true,
+      "uploadReason": 0,
+      "customer": "Isavend"
+    },
+    "CSA200202655": {
+      "dexId": "23049102",
+      "timestamp": "2025-09-24 06:20:26",
+      "firmware": "1.0.119",
+      "parsed": false,
+      "preprocessed": true,
+      "uploadReason": 0,
+      "customer": "Isavend"
+    },
+    "CSA200205375": {
+      "dexId": "23049032",
+      "timestamp": "2025-09-24 06:20:23",
+      "firmware": "1.0.119",
+      "parsed": true,
+      "preprocessed": true,
+      "uploadReason": 0,
+      "customer": "Isavend"
+    },
+    "CSA200202675": {
+      "dexId": "23048950",
+      "timestamp": "2025-09-24 06:20:19",
+      "firmware": "1.0.119",
+      "parsed": false,
+      "preprocessed": true,
+      "uploadReason": 0,
+      "customer": "Isavend"
+    },
+    "CSA200205534": {
+      "dexId": "23048886",
+      "timestamp": "2025-09-24 06:19:49",
+      "firmware": "1.0.119",
+      "parsed": true,
+      "preprocessed": true,
+      "uploadReason": 0,
+      "customer": "Isavend"
+    },
+    "CSA200202664": {
+      "dexId": "23048822",
+      "timestamp": "2025-09-24 06:19:35",
+      "firmware": "1.0.119",
+      "parsed": true,
+      "preprocessed": true,
+      "uploadReason": 0,
+      "customer": "Isavend"
+    },
+    "CSA200202654": {
+      "dexId": "23048702",
+      "timestamp": "2025-09-24 06:19:26",
+      "firmware": "1.0.119",
+      "parsed": false,
+      "preprocessed": true,
+      "uploadReason": 0,
+      "customer": "Isavend"
+    },
+    "CSA200202674": {
+      "dexId": "23048655",
+      "timestamp": "2025-09-24 06:19:23",
+      "firmware": "1.0.119",
+      "parsed": true,
+      "preprocessed": true,
+      "uploadReason": 0,
+      "customer": "Isavend"
+    },
+    "CSA200202683": {
+      "dexId": "23048413",
+      "timestamp": "2025-09-24 06:18:32",
+      "firmware": "1.0.119",
+      "parsed": true,
+      "preprocessed": true,
+      "uploadReason": 0,
+      "customer": "Isavend"
+    },
+    "CSA200204043": {
+      "dexId": "23048280",
+      "timestamp": "2025-09-24 06:18:23",
+      "firmware": "1.0.119",
+      "parsed": true,
+      "preprocessed": true,
+      "uploadReason": 0,
+      "customer": "Isavend"
+    },
+    "CSA200202673": {
+      "dexId": "23048233",
+      "timestamp": "2025-09-24 06:18:20",
+      "firmware": "1.0.119",
+      "parsed": true,
+      "preprocessed": true,
+      "uploadReason": 0,
+      "customer": "Isavend"
+    },
+    "CSA200202653": {
+      "dexId": "23048205",
+      "timestamp": "2025-09-24 06:18:18",
+      "firmware": "1.0.119",
+      "parsed": false,
+      "preprocessed": true,
+      "uploadReason": 0,
+      "customer": "Isavend"
+    },
+    "CSA200202692": {
+      "dexId": "23047986",
+      "timestamp": "2025-09-24 06:17:29",
+      "firmware": "1.0.119",
+      "parsed": false,
+      "preprocessed": true,
+      "uploadReason": 0,
+      "customer": "Isavend"
+    },
+    "CSA200202672": {
+      "dexId": "23047848",
+      "timestamp": "2025-09-24 06:17:21",
+      "firmware": "1.0.119",
+      "parsed": true,
+      "preprocessed": true,
+      "uploadReason": 0,
+      "customer": "Isavend"
+    },
+    "CSA200202662": {
+      "dexId": "23047800",
+      "timestamp": "2025-09-24 06:17:16",
+      "firmware": "1.0.119",
+      "parsed": false,
+      "preprocessed": true,
+      "uploadReason": 0,
+      "customer": "Isavend"
+    },
+    "CSA200204452": {
+      "dexId": "23047797",
+      "timestamp": "2025-09-24 06:17:15",
+      "firmware": "1.0.119",
+      "parsed": false,
+      "preprocessed": true,
+      "uploadReason": 0,
+      "customer": "Isavend"
+    },
+    "CSA200202681": {
+      "dexId": "23047697",
+      "timestamp": "2025-09-24 06:16:35",
+      "firmware": "1.0.119",
+      "parsed": true,
+      "preprocessed": true,
+      "uploadReason": 0,
+      "customer": "Isavend"
+    },
+    "CSA200202671": {
+      "dexId": "23047463",
+      "timestamp": "2025-09-24 06:16:19",
+      "firmware": "1.0.119",
+      "parsed": true,
+      "preprocessed": true,
+      "uploadReason": 0,
+      "customer": "Isavend"
+    }
+  }
+}

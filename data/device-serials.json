@@ -1,0 +1,466 @@
+{
+	"timestamp": "2025-09-24T01:03:43.809Z",
+	"totalDevices": 57,
+	"recordsTotal": 57,
+	"serialCount": 57,
+	"uniqueSerials": [
+		"552234133189",
+		"552234133191",
+		"552234133192",
+		"552234133194",
+		"552234133195",
+		"552234133196",
+		"552234133200",
+		"552234133306",
+		"CSA200201037",
+		"CSA200202653",
+		"CSA200202654",
+		"CSA200202655",
+		"CSA200202656",
+		"CSA200202657",
+		"CSA200202658",
+		"CSA200202659",
+		"CSA200202660",
+		"CSA200202661",
+		"CSA200202662",
+		"CSA200202663",
+		"CSA200202664",
+		"CSA200202665",
+		"CSA200202666",
+		"CSA200202667",
+		"CSA200202668",
+		"CSA200202669",
+		"CSA200202670",
+		"CSA200202671",
+		"CSA200202672",
+		"CSA200202673",
+		"CSA200202674",
+		"CSA200202675",
+		"CSA200202676",
+		"CSA200202677",
+		"CSA200202678",
+		"CSA200202679",
+		"CSA200202680",
+		"CSA200202681",
+		"CSA200202683",
+		"CSA200202684",
+		"CSA200202685",
+		"CSA200202686",
+		"CSA200202687",
+		"CSA200202688",
+		"CSA200202689",
+		"CSA200202690",
+		"CSA200202691",
+		"CSA200202692",
+		"CSA200204043",
+		"CSA200204452",
+		"CSA200205375",
+		"CSA200205376",
+		"CSA200205377",
+		"CSA200205378",
+		"CSA200205534",
+		"CSA200205535",
+		"CSA200205616"
+	],
+	"deviceDetails": [
+		{
+			"caseSerial": "552234133189",
+			"deviceId": 3672,
+			"customerName": "Isavend",
+			"lastSeen": "2025-09-24 01:02:18",
+			"state": "approved"
+		},
+		{
+			"caseSerial": "552234133191",
+			"deviceId": 3666,
+			"customerName": "Isavend",
+			"lastSeen": "2025-09-24 00:50:26",
+			"state": "approved"
+		},
+		{
+			"caseSerial": "552234133192",
+			"deviceId": 3669,
+			"customerName": "Isavend",
+			"lastSeen": "2025-09-24 00:48:39",
+			"state": "approved"
+		},
+		{
+			"caseSerial": "552234133194",
+			"deviceId": 3781,
+			"customerName": "Isavend",
+			"lastSeen": "2025-09-24 00:56:52",
+			"state": "approved"
+		},
+		{
+			"caseSerial": "552234133195",
+			"deviceId": 3793,
+			"customerName": "Isavend",
+			"lastSeen": "2025-09-24 00:58:08",
+			"state": "approved"
+		},
+		{
+			"caseSerial": "552234133196",
+			"deviceId": 3794,
+			"customerName": "Isavend",
+			"lastSeen": "2025-09-24 00:50:24",
+			"state": "approved"
+		},
+		{
+			"caseSerial": "552234133200",
+			"deviceId": 3789,
+			"customerName": "Isavend",
+			"lastSeen": "2025-09-24 00:55:24",
+			"state": "approved"
+		},
+		{
+			"caseSerial": "552234133306",
+			"deviceId": 3931,
+			"customerName": "Isavend",
+			"lastSeen": "2025-09-24 00:55:15",
+			"state": "approved"
+		},
+		{
+			"caseSerial": "CSA200201037",
+			"deviceId": 1039,
+			"customerName": "Isavend",
+			"lastSeen": "2025-09-24 00:52:11",
+			"state": "approved"
+		},
+		{
+			"caseSerial": "CSA200202653",
+			"deviceId": 2656,
+			"customerName": "Isavend",
+			"lastSeen": "2025-09-24 01:03:14",
+			"state": "approved"
+		},
+		{
+			"caseSerial": "CSA200202654",
+			"deviceId": 2657,
+			"customerName": "Isavend",
+			"lastSeen": "2025-09-24 00:49:13",
+			"state": "approved"
+		},
+		{
+			"caseSerial": "CSA200202655",
+			"deviceId": 2658,
+			"customerName": "Isavend",
+			"lastSeen": "2025-09-24 00:50:11",
+			"state": "approved"
+		},
+		{
+			"caseSerial": "CSA200202656",
+			"deviceId": 2659,
+			"customerName": "Isavend",
+			"lastSeen": "2025-09-24 00:51:08",
+			"state": "approved"
+		},
+		{
+			"caseSerial": "CSA200202657",
+			"deviceId": 2660,
+			"customerName": "Isavend",
+			"lastSeen": "2025-09-24 00:52:19",
+			"state": "approved"
+		},
+		{
+			"caseSerial": "CSA200202658",
+			"deviceId": 2661,
+			"customerName": "Isavend",
+			"lastSeen": "2025-07-11 05:53:12",
+			"state": "approved"
+		},
+		{
+			"caseSerial": "CSA200202659",
+			"deviceId": 2662,
+			"customerName": "Isavend",
+			"lastSeen": "2025-09-24 00:54:18",
+			"state": "approved"
+		},
+		{
+			"caseSerial": "CSA200202660",
+			"deviceId": 2663,
+			"customerName": "Isavend",
+			"lastSeen": "2025-09-24 01:00:28",
+			"state": "approved"
+		},
+		{
+			"caseSerial": "CSA200202661",
+			"deviceId": 2664,
+			"customerName": "Isavend",
+			"lastSeen": "2025-09-24 01:01:09",
+			"state": "approved"
+		},
+		{
+			"caseSerial": "CSA200202662",
+			"deviceId": 2665,
+			"customerName": "Isavend",
+			"lastSeen": "2025-09-24 01:02:18",
+			"state": "approved"
+		},
+		{
+			"caseSerial": "CSA200202663",
+			"deviceId": 2670,
+			"customerName": "Isavend",
+			"lastSeen": "2025-09-05 04:14:19",
+			"state": "approved"
+		},
+		{
+			"caseSerial": "CSA200202664",
+			"deviceId": 2669,
+			"customerName": "Isavend",
+			"lastSeen": "2025-09-24 00:49:10",
+			"state": "approved"
+		},
+		{
+			"caseSerial": "CSA200202665",
+			"deviceId": 2668,
+			"customerName": "Isavend",
+			"lastSeen": "2025-09-24 00:50:15",
+			"state": "approved"
+		},
+		{
+			"caseSerial": "CSA200202666",
+			"deviceId": 2667,
+			"customerName": "Isavend",
+			"lastSeen": "2025-09-24 00:51:08",
+			"state": "approved"
+		},
+		{
+			"caseSerial": "CSA200202667",
+			"deviceId": 2666,
+			"customerName": "Isavend",
+			"lastSeen": "2025-09-24 00:52:15",
+			"state": "approved"
+		},
+		{
+			"caseSerial": "CSA200202668",
+			"deviceId": 2671,
+			"customerName": "Isavend",
+			"lastSeen": "2025-09-24 00:53:15",
+			"state": "approved"
+		},
+		{
+			"caseSerial": "CSA200202669",
+			"deviceId": 2672,
+			"customerName": "Isavend",
+			"lastSeen": "2025-09-24 00:54:11",
+			"state": "approved"
+		},
+		{
+			"caseSerial": "CSA200202670",
+			"deviceId": 2673,
+			"customerName": "Isavend",
+			"lastSeen": "2025-09-24 01:00:19",
+			"state": "approved"
+		},
+		{
+			"caseSerial": "CSA200202671",
+			"deviceId": 2674,
+			"customerName": "Isavend",
+			"lastSeen": "2025-09-24 01:01:06",
+			"state": "approved"
+		},
+		{
+			"caseSerial": "CSA200202672",
+			"deviceId": 2675,
+			"customerName": "Isavend",
+			"lastSeen": "2025-09-24 01:02:07",
+			"state": "approved"
+		},
+		{
+			"caseSerial": "CSA200202673",
+			"deviceId": 2676,
+			"customerName": "Isavend",
+			"lastSeen": "2025-09-24 01:03:05",
+			"state": "approved"
+		},
+		{
+			"caseSerial": "CSA200202674",
+			"deviceId": 2677,
+			"customerName": "Isavend",
+			"lastSeen": "2025-09-24 00:49:12",
+			"state": "approved"
+		},
+		{
+			"caseSerial": "CSA200202675",
+			"deviceId": 2678,
+			"customerName": "Isavend",
+			"lastSeen": "2025-09-24 00:50:07",
+			"state": "approved"
+		},
+		{
+			"caseSerial": "CSA200202676",
+			"deviceId": 2679,
+			"customerName": "Isavend",
+			"lastSeen": "2025-08-16 01:06:11",
+			"state": "approved"
+		},
+		{
+			"caseSerial": "CSA200202677",
+			"deviceId": 2680,
+			"customerName": "Isavend",
+			"lastSeen": "2025-09-24 00:52:10",
+			"state": "approved"
+		},
+		{
+			"caseSerial": "CSA200202678",
+			"deviceId": 2681,
+			"customerName": "Isavend",
+			"lastSeen": "2025-09-24 00:53:17",
+			"state": "approved"
+		},
+		{
+			"caseSerial": "CSA200202679",
+			"deviceId": 2682,
+			"customerName": "Isavend",
+			"lastSeen": "2025-09-24 00:54:11",
+			"state": "approved"
+		},
+		{
+			"caseSerial": "CSA200202680",
+			"deviceId": 2683,
+			"customerName": "Isavend",
+			"lastSeen": "2025-09-24 01:00:15",
+			"state": "approved"
+		},
+		{
+			"caseSerial": "CSA200202681",
+			"deviceId": 2684,
+			"customerName": "Isavend",
+			"lastSeen": "2025-09-24 01:01:16",
+			"state": "approved"
+		},
+		{
+			"caseSerial": "CSA200202683",
+			"deviceId": 2686,
+			"customerName": "Isavend",
+			"lastSeen": "2025-09-24 01:03:18",
+			"state": "approved"
+		},
+		{
+			"caseSerial": "CSA200202684",
+			"deviceId": 2687,
+			"customerName": "Isavend",
+			"lastSeen": "2024-03-15 00:49:03",
+			"state": "approved"
+		},
+		{
+			"caseSerial": "CSA200202685",
+			"deviceId": 2688,
+			"customerName": "Isavend",
+			"lastSeen": "2025-09-24 00:50:11",
+			"state": "approved"
+		},
+		{
+			"caseSerial": "CSA200202686",
+			"deviceId": 2689,
+			"customerName": "Isavend",
+			"lastSeen": "2025-09-24 00:51:06",
+			"state": "approved"
+		},
+		{
+			"caseSerial": "CSA200202687",
+			"deviceId": 2690,
+			"customerName": "Isavend",
+			"lastSeen": "2025-09-21 08:07:18",
+			"state": "approved"
+		},
+		{
+			"caseSerial": "CSA200202688",
+			"deviceId": 2691,
+			"customerName": "Isavend",
+			"lastSeen": "2025-09-24 00:53:16",
+			"state": "approved"
+		},
+		{
+			"caseSerial": "CSA200202689",
+			"deviceId": 2692,
+			"customerName": "Isavend",
+			"lastSeen": "2025-09-24 00:54:13",
+			"state": "approved"
+		},
+		{
+			"caseSerial": "CSA200202690",
+			"deviceId": 2693,
+			"customerName": "Isavend",
+			"lastSeen": "2025-09-24 01:00:13",
+			"state": "approved"
+		},
+		{
+			"caseSerial": "CSA200202691",
+			"deviceId": 2694,
+			"customerName": "Isavend",
+			"lastSeen": "2025-09-24 01:01:20",
+			"state": "approved"
+		},
+		{
+			"caseSerial": "CSA200202692",
+			"deviceId": 2695,
+			"customerName": "Isavend",
+			"lastSeen": "2025-09-24 01:02:07",
+			"state": "approved"
+		},
+		{
+			"caseSerial": "CSA200204043",
+			"deviceId": 5148,
+			"customerName": "Isavend",
+			"lastSeen": "2025-09-24 01:03:08",
+			"state": "approved"
+		},
+		{
+			"caseSerial": "CSA200204452",
+			"deviceId": 5579,
+			"customerName": "Isavend",
+			"lastSeen": "2025-09-24 01:02:11",
+			"state": "approved"
+		},
+		{
+			"caseSerial": "CSA200205375",
+			"deviceId": 6571,
+			"customerName": "Isavend",
+			"lastSeen": "2025-09-24 00:50:20",
+			"state": "approved"
+		},
+		{
+			"caseSerial": "CSA200205376",
+			"deviceId": 6573,
+			"customerName": "Isavend",
+			"lastSeen": "2025-09-24 00:51:18",
+			"state": "approved"
+		},
+		{
+			"caseSerial": "CSA200205377",
+			"deviceId": 6575,
+			"customerName": "Isavend",
+			"lastSeen": "2025-09-24 00:52:10",
+			"state": "approved"
+		},
+		{
+			"caseSerial": "CSA200205378",
+			"deviceId": 6577,
+			"customerName": "Isavend",
+			"lastSeen": "2025-09-24 00:53:17",
+			"state": "approved"
+		},
+		{
+			"caseSerial": "CSA200205534",
+			"deviceId": 8514,
+			"customerName": "Isavend",
+			"lastSeen": "2025-09-24 00:49:09",
+			"state": "approved"
+		},
+		{
+			"caseSerial": "CSA200205535",
+			"deviceId": 8515,
+			"customerName": "Isavend",
+			"lastSeen": "2025-09-22 22:05:10",
+			"state": "approved"
+		},
+		{
+			"caseSerial": "CSA200205616",
+			"deviceId": 8597,
+			"customerName": "Isavend",
+			"lastSeen": "2025-09-24 00:51:16",
+			"state": "approved"
+		}
+	]
+}

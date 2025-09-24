@@ -1,0 +1,156 @@
+{
+  "templateType": "bev",
+  "templateVersion": "1.0",
+  "description": "Beverage vending machine DEX data template",
+  "characteristics": {
+    "hasMA5Array": true,
+    "hasCardData": true,
+    "hasSelectionMapping": true,
+    "hasRefrigeration": true,
+    "typicalProductCount": "< 20",
+    "hasPA4Fields": false,
+    "averagePA2Fields": "< 8",
+    "cashHandlingCapable": "optional",
+    "hasCA17": "may be present for cash-enabled machines"
+  },
+  "structure": {
+    "general": {
+      "required": ["ID1", "VA1", "MA5", "CA1", "CA3"],
+      "optional": ["BA1", "CA17"],
+      "MA5": {
+        "description": "Machine configuration array",
+        "temperatureHandling": {
+          "conversionFactor": "divide by 10 (40 = 4.0°C)",
+          "displayLabel": "Beverage Temperature"
+        },
+        "expectedItems": [
+          {"1": "BAUD", "description": "Communication baud rate"},
+          {"1": "SEL*", "description": "Selection mapping (SEL01-SEL10)", "fields": {"2": "column mapping", "3": "sold count", "4": "total count"}},
+          {"1": "SWITCH", "description": "Switch configuration"},
+          {"1": "STATUS", "description": "Machine status code"},
+          {"1": "CCOC", "description": "Coin changer configuration"},
+          {"1": "PREV", "description": "Previous operation data"},
+          {"1": "LANG", "description": "Language setting"},
+          {"1": "TIME", "description": "Time configuration"},
+          {"1": "LITE", "description": "Lighting configuration"},
+          {"1": "RFRG", "description": "Refrigeration settings"},
+          {"1": "TEMP", "description": "Current temperature", "fields": {"2": "temperature_raw", "3": "C", "4": "DC"}, "display": "Current temperature"},
+          {"1": "ERROR", "description": "Error codes", "fields": {"2": "error_code"}, "display": "Machine error codes", "criticality": "high"}
+        ]
+      },
+      "ID1": {
+        "description": "Machine identification",
+        "patterns": ["CAI", "KO_DDV"],
+        "fields": {
+          "1": "Machine ID string",
+          "2": "Secondary ID"
+        }
+      },
+      "CA17": {
+        "description": "Cash handling data (present in cash-enabled machines)",
+        "fields": {
+          "1": "Cash denominations/types",
+          "2": "Cash amounts",
+          "3": "Cash counts",
+          "4": "Cash handling status",
+          "5": "Additional cash data"
+        }
+      },
+      "VA1": {
+        "description": "Total sales data",
+        "fields": {
+          "1": "Total revenue (cents)",
+          "2": "Total sales count"
+        }
+      },
+      "CA1": {
+        "description": "Cash box data",
+        "fields": {
+          "1": "Cash amount (cents)",
+          "2": "Cash sales count"
+        }
+      },
+      "CA3": {
+        "description": "Cash sales summary",
+        "fields": {
+          "1": "Cash revenue (cents)",
+          "2": "Cash transactions count"
+        }
+      }
+    },
+    "products": {
+      "description": "Product-specific sales data",
+      "typicalCount": 9,
+      "structure": {
+        "PA1": {
+          "description": "Product identification",
+          "fields": {
+            "1": "Product ID/Selection number"
+          }
+        },
+        "PA2": {
+          "description": "Product sales data",
+          "fields": {
+            "1": "Sales count",
+            "2": "Revenue (cents)",
+            "3": "Price (cents)",
+            "4": "Additional sales data"
+          }
+        },
+        "PA4": {
+          "description": "Extended product data (usually absent in bev machines)",
+          "expected": false
+        }
+      }
+    }
+  },
+  "metrics": {
+    "totalSales": "VA1.2 or calculated from products",
+    "totalRevenue": "VA1.1 or calculated from products",
+    "cashSales": "CA3.2",
+    "cardSales": "calculated from PA2.1 sum",
+    "activeProducts": "products with PA2.1 > 0",
+    "temperatureCurrent": "MA5 item where 1='TEMP', divide field 2 by 10",
+    "selectionMapping": "MA5 items SEL01-SEL10 with sold/total counts",
+    "machineStatus": "MA5 item where 1='STATUS'",
+    "errorCodes": "MA5 items where 1='ERROR', field 2 contains error code",
+    "hasErrors": "boolean indicating if any ERROR records exist"
+  },
+  "detectionRules": {
+    "required": [
+      "hasMA5Array === true",
+      "hasCardData === true",
+      "hasSelectionMapping === true",
+      "productCount < 20"
+    ],
+    "confidence": 0.9
+  },
+  "sampleData": {
+    "general": {
+      "ID1": {"1": "CAI_Sample_Machine", "2": "BEV001"},
+      "VA1": {"1": "125000", "2": "500"},
+      "MA5": [
+        {"1": "BAUD", "2": "9600"},
+        {"1": "SEL01", "2": "3,4,9,10", "3": "2426", "4": "2761"},
+        {"1": "SEL02", "2": "3,4,9,10", "3": "2252", "4": "2439"},
+        {"1": "SWITCH", "2": "UNLOCK", "3": "1,2,4", "5": "7"},
+        {"1": "STATUS", "2": "CM0300"},
+        {"1": "TEMP", "2": "40", "3": "C", "4": "DC"},
+        {"1": "ERROR", "2": "CJ06"},
+        {"1": "RFRG", "2": "0", "4": "0000", "6": "0000", "7": "C", "8": "20", "9": "155", "10": "1"}
+      ],
+      "CA1": {"1": "50000", "2": "200"},
+      "CA3": {"1": "50000", "2": "200"}
+    },
+    "products": [
+      {
+        "PA1": {"1": "01"},
+        "PA2": {"1": "50", "2": "12500", "3": "250"}
+      },
+      {
+        "PA1": {"1": "02"},
+        "PA2": {"1": "30", "2": "7500", "3": "250"}
+      }
+    ]
+  }
+}
