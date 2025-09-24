@@ -226,8 +226,8 @@ export default function Devices() {
             </div>
           </div>
 
-          {/* Table Header */}
-          <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+          {/* Table Header - Hidden on mobile */}
+          <div className="hidden sm:block bg-gray-50 border border-gray-200 rounded-lg p-4">
             <div className="grid grid-cols-6 gap-4 text-sm font-semibold text-gray-700">
               <div>Case Serial</div>
               <div>Location</div>
@@ -263,8 +263,42 @@ export default function Devices() {
             const dexInLast4Hours = lastDexTime && lastDexTime > fourHoursAgo;
 
             return (
-              <div key={device.id || index} className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow">
-                <div className="grid grid-cols-6 gap-4 items-center text-sm">
+              <div key={device.id || index} className="bg-white border border-gray-200 rounded-lg p-3 sm:p-4 shadow-sm hover:shadow-md transition-shadow">
+                {/* Mobile Layout */}
+                <div className="sm:hidden space-y-3">
+                  {/* Header */}
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <div className="font-mono text-sm font-bold text-gray-900">
+                        {device.caseSerial}
+                      </div>
+                      <div className="text-xs text-gray-500 mt-1">
+                        {machineType === 'bev' ? '🥤' : machineType === 'food' ? '🍿' : '❓'} {machineType.toUpperCase()}
+                        {cashEnabled && ' 💵'}
+                      </div>
+                    </div>
+                    <div className="text-xs text-gray-600">
+                      <span dangerouslySetInnerHTML={{__html: device.connection}} />
+                    </div>
+                  </div>
+
+                  {/* Location and Last Seen */}
+                  <div className="grid grid-cols-2 gap-3 text-xs">
+                    <div>
+                      <span className="font-medium text-gray-700">Location:</span>
+                      <div className="text-gray-900 break-words">{machineLocation}</div>
+                    </div>
+                    <div>
+                      <span className="font-medium text-gray-700">Last Seen:</span>
+                      <div className="text-gray-900">
+                        <span dangerouslySetInnerHTML={{__html: device.lastSeen}} />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Desktop Layout */}
+                <div className="hidden sm:grid sm:grid-cols-6 gap-4 items-center text-sm">
 
                   {/* Case Serial */}
                   <div>
@@ -591,51 +625,53 @@ export default function Devices() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="min-h-screen bg-gray-50 p-3 sm:p-6">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="mb-8 flex justify-between items-start">
-          <div>
-            <h1 className="text-4xl font-bold text-gray-900 mb-2">Devices Management</h1>
-            <p className="text-gray-600">Monitor and manage all your vending machines</p>
-          </div>
-          <div className="flex flex-col items-end space-y-3">
-            {/* Digital Clock */}
-            <div className="bg-slate-900 text-green-400 px-4 py-2 rounded-lg font-mono text-sm shadow-lg">
-              <div className="text-xs text-green-300 mb-1">AEST Time</div>
-              <div className="text-lg font-bold">
-                {isMounted ? formatAESTTime(currentTime) : '--:--:--'}
-              </div>
+        <div className="mb-6 sm:mb-8">
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start space-y-4 sm:space-y-0">
+            <div>
+              <h1 className="text-2xl sm:text-4xl font-bold text-gray-900 mb-2">Devices Management</h1>
+              <p className="text-gray-600 text-sm sm:text-base">Monitor and manage all your vending machines</p>
             </div>
-
-            {/* User Info */}
-            <div className="flex items-center space-x-4">
-              <div className="text-sm text-gray-600">
-                Welcome, {user?.email}
+            <div className="flex flex-col sm:flex-col sm:items-end space-y-3">
+              {/* Digital Clock */}
+              <div className="bg-slate-900 text-green-400 px-3 sm:px-4 py-2 rounded-lg font-mono text-sm shadow-lg">
+                <div className="text-xs text-green-300 mb-1">AEST Time</div>
+                <div className="text-sm sm:text-lg font-bold">
+                  {isMounted ? formatAESTTime(currentTime) : '--:--:--'}
+                </div>
               </div>
-              <button
-                onClick={signOut}
-                className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"
-              >
-                Sign Out
-              </button>
+
+              {/* User Info */}
+              <div className="flex items-center space-x-3 sm:space-x-4">
+                <div className="text-xs sm:text-sm text-gray-600">
+                  Welcome, {user?.email}
+                </div>
+                <button
+                  onClick={signOut}
+                  className="bg-gray-600 hover:bg-gray-700 text-white px-3 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-colors"
+                >
+                  Sign Out
+                </button>
+              </div>
             </div>
           </div>
         </div>
 
         {/* Navigation */}
         <div className="mb-6">
-          <nav className="flex space-x-4">
+          <nav className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-4">
             <a
               href="/"
-              className="bg-white text-gray-700 hover:text-gray-900 px-4 py-2 rounded-lg border border-gray-200 transition-colors"
+              className="bg-white text-gray-700 hover:text-gray-900 px-3 sm:px-4 py-2 rounded-lg border border-gray-200 transition-colors text-sm sm:text-base text-center sm:text-left"
             >
               ← Back to Dashboard
             </a>
             <button
               onClick={fetchDevicesData}
               disabled={loading}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors disabled:opacity-50"
+              className="bg-blue-600 hover:bg-blue-700 text-white px-3 sm:px-4 py-2 rounded-lg transition-colors disabled:opacity-50 text-sm sm:text-base"
             >
               {loading ? 'Loading...' : 'Refresh Devices'}
             </button>
@@ -644,59 +680,39 @@ export default function Devices() {
 
         {/* Stats Cards */}
         {devicesData && devicesData.data && (
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8">
-            <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
-              <div className="text-2xl font-bold text-blue-600">
+          <div className="grid grid-cols-4 gap-2 sm:gap-4 mb-6">
+            <div className="bg-white rounded-lg p-3 sm:p-4 shadow-sm border border-gray-200">
+              <div className="text-lg sm:text-xl font-bold text-blue-600">
                 {devicesData.data.recordsTotal || 0}
               </div>
-              <div className="text-gray-600">Total Devices</div>
+              <div className="text-xs sm:text-sm text-gray-600">Total</div>
             </div>
-            <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
-              <div className="text-2xl font-bold text-green-600">
-                {(() => {
-                  if (!devicesData.data.data) return 0;
-                  const devices = devicesData.data.data;
-                  const filtered = devices.filter(deviceData => {
-                    const caseSerial = deviceData.devices.caseSerial;
-                    const mappingData = devicesData.machineMapping?.machines?.[caseSerial];
-                    const machineType = mappingData?.details?.machineType || 'unknown';
-                    const cashEnabled = mappingData?.details?.cashEnabled || false;
-                    if (deviceTypeFilter !== 'all' && machineType !== deviceTypeFilter) return false;
-                    if (cashMachineFilter === 'cash' && !cashEnabled) return false;
-                    if (cashMachineFilter === 'non-cash' && cashEnabled) return false;
-                    return true;
-                  });
-                  return filtered.length;
-                })()}
-              </div>
-              <div className="text-gray-600">Filtered View</div>
-            </div>
-            <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
-              <div className="text-2xl font-bold text-purple-600">
+            <div className="bg-white rounded-lg p-3 sm:p-4 shadow-sm border border-gray-200">
+              <div className="text-lg sm:text-xl font-bold text-purple-600">
                 {(() => {
                   if (!devicesData.machineMapping?.machines) return 0;
                   return Object.values(devicesData.machineMapping.machines).filter(m => m.details?.machineType === 'bev').length;
                 })()}
               </div>
-              <div className="text-gray-600">🥤 Beverage</div>
+              <div className="text-xs sm:text-sm text-gray-600">🥤 Bev</div>
             </div>
-            <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
-              <div className="text-2xl font-bold text-orange-600">
+            <div className="bg-white rounded-lg p-3 sm:p-4 shadow-sm border border-gray-200">
+              <div className="text-lg sm:text-xl font-bold text-orange-600">
                 {(() => {
                   if (!devicesData.machineMapping?.machines) return 0;
                   return Object.values(devicesData.machineMapping.machines).filter(m => m.details?.machineType === 'food').length;
                 })()}
               </div>
-              <div className="text-gray-600">🍿 Food/Snack</div>
+              <div className="text-xs sm:text-sm text-gray-600">🍿 Food</div>
             </div>
-            <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
-              <div className="text-2xl font-bold text-green-700">
+            <div className="bg-white rounded-lg p-3 sm:p-4 shadow-sm border border-gray-200">
+              <div className="text-lg sm:text-xl font-bold text-green-700">
                 {(() => {
                   if (!devicesData.machineMapping?.machines) return 0;
                   return Object.values(devicesData.machineMapping.machines).filter(m => m.details?.cashEnabled === true).length;
                 })()}
               </div>
-              <div className="text-gray-600">💵 Cash Enabled</div>
+              <div className="text-xs sm:text-sm text-gray-600">💵 Cash</div>
             </div>
           </div>
         )}
