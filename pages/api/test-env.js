@@ -20,7 +20,10 @@ export default async function handler(req, res) {
         hasCantaloupeUsername: !!process.env.CANTALOUPE_USERNAME,
         hasCantaloupePassword: !!process.env.CANTALOUPE_PASSWORD,
         hasCantaloupeMachineId: !!process.env.CANTALOUPE_MACHINE_ID,
-        nodeEnv: process.env.NODE_ENV || 'unknown'
+        hasSiteUrl: !!process.env.NEXT_PUBLIC_SITE_URL,
+        siteUrl: process.env.NEXT_PUBLIC_SITE_URL || 'not-set',
+        nodeEnv: process.env.NODE_ENV || 'unknown',
+        origin: req.headers?.origin || 'no-origin'
       };
     } catch (envError) {
       envCheck = {

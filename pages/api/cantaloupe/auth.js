@@ -13,7 +13,9 @@ export default async function handler(req, res) {
     hasUsername: !!username,
     hasPassword: !!password,
     usernameLength: username ? username.length : 0,
-    environment: process.env.NODE_ENV
+    environment: process.env.NODE_ENV,
+    hasSiteUrl: !!process.env.NEXT_PUBLIC_SITE_URL,
+    origin: req.headers.origin
   });
 
   if (!username || !password) {
