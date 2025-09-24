@@ -1,3 +1,6 @@
+
+export const runtime = 'edge';
+
 // TODO: Add Supabase logging integration once auth middleware is set up
 export default async function handler(req, res) {
   if (req.method !== 'GET' && req.method !== 'POST') {
