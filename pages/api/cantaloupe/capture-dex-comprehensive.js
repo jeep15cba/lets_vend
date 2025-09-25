@@ -18,7 +18,8 @@ export default async function handler(request) {
 
     if (!cookies) {
       console.log('No cookies provided, authenticating for DEX capture...');
-      const authResponse = await fetch(`${request.headers.get('origin') || 'http://localhost:3300'}/api/cantaloupe/auth`, {
+      const baseUrl = request.headers.get('origin') || process.env.NEXT_PUBLIC_SITE_URL || 'https://lets-vend.pages.dev';
+      const authResponse = await fetch(`${baseUrl}/api/cantaloupe/auth`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -52,10 +53,10 @@ export default async function handler(request) {
     console.log('DEX page HTML length:', dexPageHtml.length);
 
     if (!dexPageResponse.ok) {
-      return res.status(dexPageResponse.status).json({
+      return new Response(JSON.stringify({
         error: `Failed to fetch DEX page: ${dexPageResponse.status}`,
         htmlPreview: dexPageHtml.substring(0, 1000)
-      });
+      }), { status: dexPageResponse.status, headers: { "Content-Type": "application/json" } });
     }
 
     // Extract CSRF token
@@ -215,7 +216,7 @@ export default async function handler(request) {
 
     console.log(`Final result: ${validMappingsCount} valid DEX mappings extracted`);
 
-    res.status(200).json({
+    return new Response(JSON.stringify({
       success: true,
       workingStrategy: workingStrategy,
       totalRecords: successfulData?.recordsTotal || successfulData?.data?.length || 0,
@@ -224,12 +225,12 @@ export default async function handler(request) {
       mappings: mappings,
       csrfToken: csrfToken ? csrfToken.substring(0, 10) + '...' : null,
       timestamp: new Date().toISOString()
-    });
+    }), { headers: { "Content-Type": "application/json" } });
 
   } catch (error) {
     console.error('Comprehensive DEX capture error:', error);
-    res.status(500).json({
+    return new Response(JSON.stringify({
       error: 'Failed to capture DEX data: ' + error.message
-    });
+    }), { status: 500, headers: { "Content-Type": "application/json" } });
   }
 }

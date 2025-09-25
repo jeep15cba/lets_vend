@@ -15,7 +15,8 @@ export default async function handler(request) {
 
     if (!cookies) {
       console.log('No cookies provided, authenticating for DEX page scrape...');
-      const authResponse = await fetch(`${request.headers.get('origin') || 'http://localhost:3300'}/api/cantaloupe/auth`, {
+      const baseUrl = request.headers.get('origin') || process.env.NEXT_PUBLIC_SITE_URL || 'https://lets-vend.pages.dev';
+      const authResponse = await fetch(`${baseUrl}/api/cantaloupe/auth`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -59,10 +60,10 @@ export default async function handler(request) {
     console.log('DEX page HTML length:', dexPageHtml.length);
 
     if (!dexPageResponse.ok) {
-      return res.status(dexPageResponse.status).json({
+      return new Response(JSON.stringify({
         error: `Failed to fetch DEX page: ${dexPageResponse.status} ${dexPageResponse.statusText}`,
         htmlPreview: dexPageHtml.substring(0, 1000)
-      });
+      }), { status: dexPageResponse.status, headers: { "Content-Type": "application/json" } });
     }
 
     // Look for JSON data embedded in the page or AJAX endpoints
@@ -103,7 +104,7 @@ export default async function handler(request) {
       }
     }
 
-    res.status(200).json({
+    return new Response(JSON.stringify({
       success: true,
       pageStatus: dexPageResponse.status,
       pageLength: dexPageHtml.length,
@@ -116,12 +117,12 @@ export default async function handler(request) {
       },
       htmlPreview: dexPageHtml.substring(0, 2000),
       timestamp: new Date().toISOString()
-    });
+    }), { headers: { "Content-Type": "application/json" } });
 
   } catch (error) {
     console.error('DEX page scrape error:', error);
-    res.status(500).json({
+    return new Response(JSON.stringify({
       error: 'Failed to scrape DEX page: ' + error.message
-    });
+    }), { status: 500, headers: { "Content-Type": "application/json" } });
   }
 }

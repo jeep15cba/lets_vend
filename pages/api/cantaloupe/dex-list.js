@@ -16,7 +16,8 @@ export default async function handler(request) {
 
     if (!cookies) {
       console.log('No cookies provided, authenticating for DEX list access...');
-      const authResponse = await fetch(`${request.headers.get('origin') || 'http://localhost:3300'}/api/cantaloupe/auth`, {
+      const baseUrl = request.headers.get('origin') || process.env.NEXT_PUBLIC_SITE_URL || 'https://lets-vend.pages.dev';
+      const authResponse = await fetch(`${baseUrl}/api/cantaloupe/auth`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -143,11 +144,11 @@ export default async function handler(request) {
     console.log('Response preview:', responseText.substring(0, 500));
 
     if (!response.ok) {
-      return res.status(response.status).json({
+      return new Response(JSON.stringify({
         error: `HTTP ${response.status}: ${response.statusText}`,
         rawResponse: responseText,
         headers: Object.fromEntries(response.headers.entries())
-      });
+      }), { status: response.status, headers: { "Content-Type": "application/json" } });
     }
 
     // Try to parse as JSON
@@ -158,28 +159,28 @@ export default async function handler(request) {
       console.log('Records found:', jsonData.recordsTotal);
     } catch (parseError) {
       console.error('Failed to parse as JSON:', parseError.message);
-      return res.status(200).json({
+      return new Response(JSON.stringify({
         success: true,
         type: 'text',
         rawResponse: responseText,
         parseError: parseError.message,
         timestamp: new Date().toISOString()
-      });
+      }), { headers: { "Content-Type": "application/json" } });
     }
 
     // Return the parsed JSON data
-    res.status(200).json({
+    return new Response(JSON.stringify({
       success: true,
       type: 'json',
       data: jsonData,
       responseLength: responseText.length,
       timestamp: new Date().toISOString()
-    });
+    }), { headers: { "Content-Type": "application/json" } });
 
   } catch (error) {
     console.error('DEX list fetch error:', error);
-    res.status(500).json({
+    return new Response(JSON.stringify({
       error: 'Failed to fetch DEX list: ' + error.message
-    });
+    }), { status: 500, headers: { "Content-Type": "application/json" } });
   }
 }

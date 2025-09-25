@@ -16,7 +16,8 @@ export default async function handler(request) {
 
     if (!cookies) {
       console.log('No cookies provided, authenticating for DEX list debug...');
-      const authResponse = await fetch(`${request.headers.get('origin') || 'http://localhost:3300'}/api/cantaloupe/auth`, {
+      const baseUrl = request.headers.get('origin') || process.env.NEXT_PUBLIC_SITE_URL || 'https://lets-vend.pages.dev';
+      const authResponse = await fetch(`${baseUrl}/api/cantaloupe/auth`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -146,17 +147,17 @@ export default async function handler(request) {
       }
     }
 
-    res.status(200).json({
+    return new Response(JSON.stringify({
       success: true,
       csrfToken: csrfToken ? csrfToken.substring(0, 10) + '...' : 'None',
       results: results,
       timestamp: new Date().toISOString()
-    });
+    }), { headers: { "Content-Type": "application/json" } });
 
   } catch (error) {
     console.error('DEX list debug error:', error);
-    res.status(500).json({
+    return new Response(JSON.stringify({
       error: 'Failed to debug DEX list: ' + error.message
-    });
+    }), { status: 500, headers: { "Content-Type": "application/json" } });
   }
 }

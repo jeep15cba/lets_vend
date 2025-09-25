@@ -20,7 +20,8 @@ export default async function handler(request) {
 
     if (!sessionCookies) {
       console.log('No cookies provided, authenticating for parsed DEX data...');
-      const authResponse = await fetch(`${request.headers.get('origin') || 'http://localhost:3300'}/api/cantaloupe/auth`, {
+      const baseUrl = request.headers.get('origin') || process.env.NEXT_PUBLIC_SITE_URL || 'https://lets-vend.pages.dev';
+      const authResponse = await fetch(`${baseUrl}/api/cantaloupe/auth`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -105,13 +106,13 @@ export default async function handler(request) {
     console.log('Response length:', responseText.length);
 
     if (!response.ok) {
-      return res.status(response.status).json({
+      return new Response(JSON.stringify({
         success: false,
         error: `HTTP ${response.status}: ${response.statusText}`,
         rawResponse: responseText,
         dexId: dexId,
         headers: Object.fromEntries(response.headers.entries())
-      });
+      }), { status: response.status, headers: { "Content-Type": "application/json" } });
     }
 
     // Try to parse as JSON (parsed DEX should be structured JSON)
@@ -130,7 +131,7 @@ export default async function handler(request) {
       console.log('Raw response preview:', responseText.substring(0, 500));
 
       // Return raw response if parsing fails
-      return res.status(200).json({
+      return new Response(JSON.stringify({
         success: true,
         type: 'text',
         dexId: dexId,
@@ -138,11 +139,11 @@ export default async function handler(request) {
         parseError: parseError.message,
         note: 'Response could not be parsed as JSON, returning as text',
         timestamp: new Date().toISOString()
-      });
+      }), { headers: { "Content-Type": "application/json" } });
     }
 
     // Return the structured parsed DEX data
-    res.status(200).json({
+    return new Response(JSON.stringify({
       success: true,
       type: 'parsed_dex_json',
       dexId: dexId,
@@ -150,14 +151,14 @@ export default async function handler(request) {
       responseLength: responseText.length,
       structure: parsedDexData ? Object.keys(parsedDexData) : [],
       timestamp: new Date().toISOString()
-    });
+    }), { headers: { "Content-Type": "application/json" } });
 
   } catch (error) {
     console.error('Parsed DEX fetch error:', error);
-    res.status(500).json({
+    return new Response(JSON.stringify({
       success: false,
       error: 'Failed to fetch parsed DEX data: ' + error.message,
       dexId: dexId
-    });
+    }), { status: 500, headers: { "Content-Type": "application/json" } });
   }
 }

@@ -24,7 +24,8 @@ export default async function handler(request) {
 
     // Instead of searching DEX records directly, we'll use the existing working dex-list endpoint
     // and filter the results client-side
-    const dexListResponse = await fetch(`${request.headers.get('origin') || 'http://localhost:3300'}/api/cantaloupe/dex-list`, {
+    const baseUrl = request.headers.get('origin') || process.env.NEXT_PUBLIC_SITE_URL || 'https://lets-vend.pages.dev';
+    const dexListResponse = await fetch(`${baseUrl}/api/cantaloupe/dex-list`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

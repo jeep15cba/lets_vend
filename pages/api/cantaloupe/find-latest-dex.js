@@ -21,7 +21,8 @@ export default async function handler(request) {
 
     if (!cookies) {
       console.log('No cookies provided, authenticating for DEX search...');
-      const authResponse = await fetch(`${request.headers.get('origin') || 'http://localhost:3300'}/api/cantaloupe/auth`, {
+      const baseUrl = request.headers.get('origin') || process.env.NEXT_PUBLIC_SITE_URL || 'https://lets-vend.pages.dev';
+      const authResponse = await fetch(`${baseUrl}/api/cantaloupe/auth`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -104,15 +105,15 @@ export default async function handler(request) {
     formData.append('order[0][dir]', 'desc');
 
     // This approach failed due to server error, fall back to a simpler method
-    return res.status(501).json({
+    return new Response(JSON.stringify({
       error: 'Direct DEX search not implemented - server returns 500 error',
       suggestion: 'Use the main DEX list and filter client-side for now'
-    });
+    }), { status: 501, headers: { "Content-Type": "application/json" } });
 
   } catch (error) {
     console.error('DEX search error:', error);
-    res.status(500).json({
+    return new Response(JSON.stringify({
       error: 'Failed to find latest DEX: ' + error.message
-    });
+    }), { status: 500, headers: { "Content-Type": "application/json" } });
   }
 }

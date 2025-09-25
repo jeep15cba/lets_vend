@@ -8,7 +8,8 @@ export default async function handler(request) {
 
   try {
     console.log('Authenticating for serial number capture...');
-    const authResponse = await fetch(`${request.headers.get('origin') || 'http://localhost:3300'}/api/cantaloupe/auth`, {
+    const baseUrl = request.headers.get('origin') || process.env.NEXT_PUBLIC_SITE_URL || 'https://lets-vend.pages.dev';
+    const authResponse = await fetch(`${baseUrl}/api/cantaloupe/auth`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -129,10 +130,10 @@ export default async function handler(request) {
     console.log('Response length:', responseText.length);
 
     if (!response.ok) {
-      return res.status(response.status).json({
+      return new Response(JSON.stringify({
         error: `HTTP ${response.status}: ${response.statusText}`,
         rawResponse: responseText.substring(0, 1000)
-      });
+      }), { status: response.status, headers: { "Content-Type": "application/json" } });
     }
 
     // Parse JSON response
@@ -140,11 +141,11 @@ export default async function handler(request) {
     try {
       jsonData = JSON.parse(responseText);
     } catch (parseError) {
-      return res.status(500).json({
+      return new Response(JSON.stringify({
         error: 'Failed to parse JSON response',
         parseError: parseError.message,
         rawResponse: responseText.substring(0, 1000)
-      });
+      }), { status: 500, headers: { "Content-Type": "application/json" } });
     }
 
     // Extract all unique case serials
@@ -174,7 +175,7 @@ export default async function handler(request) {
 
     console.log(`Captured ${uniqueSerials.length} unique case serials from ${jsonData.data?.length || 0} total devices`);
 
-    res.status(200).json({
+    return new Response(JSON.stringify({
       success: true,
       totalDevices: jsonData.data?.length || 0,
       recordsTotal: jsonData.recordsTotal || 0,
@@ -182,12 +183,12 @@ export default async function handler(request) {
       deviceDetails: deviceInfo,
       serialCount: uniqueSerials.length,
       timestamp: new Date().toISOString()
-    });
+    }), { headers: { "Content-Type": "application/json" } });
 
   } catch (error) {
     console.error('Serial capture error:', error);
-    res.status(500).json({
+    return new Response(JSON.stringify({
       error: 'Failed to capture serial numbers: ' + error.message
-    });
+    }), { status: 500, headers: { "Content-Type": "application/json" } });
   }
 }

@@ -10,7 +10,8 @@ export default async function handler(request) {
     console.log('Finding missing DEX mappings by comparing devices with DEX data...');
 
     // Get all devices first
-    const devicesResponse = await fetch(`${request.headers.get('origin') || 'http://localhost:3300'}/api/cantaloupe/devices-raw`, {
+    const baseUrl = request.headers.get('origin') || process.env.NEXT_PUBLIC_SITE_URL || 'https://lets-vend.pages.dev';
+    const devicesResponse = await fetch(`${baseUrl}/api/cantaloupe/devices-raw`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(await request.json())
@@ -32,16 +33,16 @@ export default async function handler(request) {
     console.log(`Found ${deviceSerials.size} device case serials`);
 
     // Edge Runtime doesn't support fs module, return error
-    return res.status(501).json({
+    return new Response(JSON.stringify({
       error: 'DEX mapping search is not available in Edge Runtime (Cloudflare Pages)',
       note: 'This endpoint requires file system access which is not supported in serverless Edge Runtime',
       timestamp: new Date().toISOString()
-    });
+    }), { status: 501, headers: { "Content-Type": "application/json" } });
 
   } catch (error) {
     console.error('Missing mappings search error:', error);
-    res.status(500).json({
+    return new Response(JSON.stringify({
       error: 'Failed to find missing DEX mappings: ' + error.message
-    });
+    }), { status: 500, headers: { "Content-Type": "application/json" } });
   }
 }
