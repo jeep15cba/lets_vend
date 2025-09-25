@@ -1,15 +1,20 @@
 export const runtime = 'edge';
-export default async function handler(req, res) {
+export default async function handler(request) {
   try {
-    return res.status(200).json({
+    return new Response(JSON.stringify({
       success: true,
-      message: 'Node.js runtime is working',
+      message: 'Edge runtime is working',
       timestamp: new Date().toISOString(),
-      runtime: 'nodejs'
+      runtime: 'edge'
+    }), {
+      headers: { 'Content-Type': 'application/json' }
     });
   } catch (error) {
-    return res.status(500).json({
+    return new Response(JSON.stringify({
       error: 'Basic test failed: ' + error.message
+    }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
     });
   }
 }

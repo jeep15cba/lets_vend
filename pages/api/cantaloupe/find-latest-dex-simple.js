@@ -1,15 +1,22 @@
 
 export const runtime = 'edge';
 
-export default async function handler(req, res) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
+export default async function handler(request) {
+  if (request.method !== 'POST') {
+    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
+      status: 405,
+      headers: { 'Content-Type': 'application/json' }
+    });
   }
 
-  const { caseSerial } = req.body;
+  const body = await request.json();
+  const { caseSerial } = body;
 
   if (!caseSerial) {
-    return res.status(400).json({ error: 'caseSerial is required' });
+    return new Response(JSON.stringify({ error: 'caseSerial is required' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' }
+    });
   }
 
   try {
@@ -17,7 +24,7 @@ export default async function handler(req, res) {
 
     // Instead of searching DEX records directly, we'll use the existing working dex-list endpoint
     // and filter the results client-side
-    const dexListResponse = await fetch(`${req.headers.origin || 'http://localhost:3300'}/api/cantaloupe/dex-list`, {
+    const dexListResponse = await fetch(`${request.headers.get('origin') || 'http://localhost:3300'}/api/cantaloupe/dex-list`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -27,9 +34,12 @@ export default async function handler(req, res) {
     const dexListData = await dexListResponse.json();
 
     if (!dexListData.success) {
-      return res.status(500).json({
+      return new Response(JSON.stringify({
         error: 'Failed to fetch DEX list',
         details: dexListData.error
+      }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' }
       });
     }
 
@@ -62,28 +72,36 @@ export default async function handler(req, res) {
     }
 
     if (!latestDexRecord) {
-      return res.status(404).json({
+      return new Response(JSON.stringify({
         error: `No DEX records found for case serial: ${caseSerial}`,
         caseSerial: caseSerial,
         totalRecords: dexListData.data?.recordsTotal || 0
+      }), {
+        status: 404,
+        headers: { 'Content-Type': 'application/json' }
       });
     }
 
     console.log(`Found latest DEX ID ${latestDexId} for case serial ${caseSerial}`);
 
-    res.status(200).json({
+    return new Response(JSON.stringify({
       success: true,
       caseSerial: caseSerial,
       latestDexId: latestDexId,
       dexRecord: latestDexRecord,
       totalMatches: dexListData.data?.data?.filter(r => r.devices?.caseSerial === caseSerial).length || 0,
       timestamp: new Date().toISOString()
+    }), {
+      headers: { 'Content-Type': 'application/json' }
     });
 
   } catch (error) {
     console.error('DEX search error:', error);
-    res.status(500).json({
+    return new Response(JSON.stringify({
       error: 'Failed to find latest DEX: ' + error.message
+    }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
     });
   }
 }

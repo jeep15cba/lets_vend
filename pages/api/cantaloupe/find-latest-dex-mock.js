@@ -1,15 +1,22 @@
 
 export const runtime = 'edge';
 
-export default async function handler(req, res) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
+export default async function handler(request) {
+  if (request.method !== 'POST') {
+    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
+      status: 405,
+      headers: { 'Content-Type': 'application/json' }
+    });
   }
 
-  const { caseSerial } = req.body;
+  const body = await request.json();
+  const { caseSerial } = body;
 
   if (!caseSerial) {
-    return res.status(400).json({ error: 'caseSerial is required' });
+    return new Response(JSON.stringify({ error: 'caseSerial is required' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' }
+    });
   }
 
   try {
@@ -29,13 +36,16 @@ export default async function handler(req, res) {
     const dexId = latestRecord && latestRecord.dexId ? latestRecord.dexId : null;
 
     if (!dexId) {
-      return res.status(404).json({
+      return new Response(JSON.stringify({
         success: false,
         error: 'No valid DEX ID found for this case serial',
         caseSerial: caseSerial,
         status: latestRecord?.status || 'not_found',
         note: latestRecord?.note || 'Case serial not found in mapping file',
         timestamp: new Date().toISOString()
+      }), {
+        status: 404,
+        headers: { 'Content-Type': 'application/json' }
       });
     }
 
@@ -63,7 +73,7 @@ export default async function handler(req, res) {
 
     console.log(`Mock: Found DEX ID ${dexId} for case serial ${caseSerial}`);
 
-    res.status(200).json({
+    return new Response(JSON.stringify({
       success: true,
       caseSerial: caseSerial,
       latestDexId: dexId,
@@ -71,12 +81,17 @@ export default async function handler(req, res) {
       totalMatches: 1,
       timestamp: new Date().toISOString(),
       note: "Mock data for testing - replace with real search when available"
+    }), {
+      headers: { 'Content-Type': 'application/json' }
     });
 
   } catch (error) {
     console.error('Mock DEX search error:', error);
-    res.status(500).json({
+    return new Response(JSON.stringify({
       error: 'Failed to find latest DEX: ' + error.message
+    }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
     });
   }
 }

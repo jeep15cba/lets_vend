@@ -1,6 +1,6 @@
 export const runtime = 'edge';
 
-export default function handler(req, res) {
+export default function handler(request) {
   try {
     // Test if we can access process at all
     const processExists = typeof process !== 'undefined';
@@ -46,16 +46,18 @@ export default function handler(req, res) {
         };
       }
     } catch (envError) {
-      return res.status(200).json({
+      return new Response(JSON.stringify({
         success: false,
         error: 'Failed to access process.env',
         details: envError.message,
         processExists,
         envExists: false
+      }), {
+        headers: { 'Content-Type': 'application/json' }
       });
     }
 
-    return res.status(200).json({
+    return new Response(JSON.stringify({
       success: true,
       runtime: 'edge',
       timestamp: new Date().toISOString(),
@@ -66,14 +68,19 @@ export default function handler(req, res) {
         envKeysPreview: envKeys.slice(0, 10), // First 10 keys only
         specificVariables: specificVars
       }
+    }), {
+      headers: { 'Content-Type': 'application/json' }
     });
 
   } catch (error) {
-    return res.status(500).json({
+    return new Response(JSON.stringify({
       success: false,
       error: 'Environment debug failed',
       message: error.message,
       stack: error.stack
+    }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
     });
   }
 }

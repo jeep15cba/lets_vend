@@ -3,15 +3,22 @@
 export const runtime = 'edge';
 
 
-export default async function handler(req, res) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
+export default async function handler(request) {
+  if (request.method !== 'POST') {
+    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
+      status: 405,
+      headers: { 'Content-Type': 'application/json' }
+    });
   }
 
-  const { parsedDexData, caseSerial, dexId } = req.body;
+  const body = await request.json();
+  const { parsedDexData, caseSerial, dexId } = body;
 
   if (!parsedDexData) {
-    return res.status(400).json({ error: 'parsedDexData is required' });
+    return new Response(JSON.stringify({ error: 'parsedDexData is required' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' }
+    });
   }
 
   try {
@@ -186,7 +193,7 @@ export default async function handler(req, res) {
       }
     }
 
-    res.status(200).json({
+    return new Response(JSON.stringify({
       success: true,
       analysis: analysis,
       metrics: metrics,
@@ -197,13 +204,18 @@ export default async function handler(req, res) {
         description: bestMatch.template?.description
       },
       timestamp: new Date().toISOString()
+    }), {
+      headers: { 'Content-Type': 'application/json' }
     });
 
   } catch (error) {
     console.error('Machine type detection error:', error);
-    res.status(500).json({
+    return new Response(JSON.stringify({
       success: false,
       error: 'Failed to detect machine type: ' + error.message
+    }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
     });
   }
 }

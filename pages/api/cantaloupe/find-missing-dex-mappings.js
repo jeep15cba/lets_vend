@@ -1,24 +1,24 @@
 
 export const runtime = 'edge';
 
-export default async function handler(req, res) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
+export default async function handler(request) {
+  if (request.method !== 'POST') {
+    return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405, headers: { "Content-Type": "application/json" } });
   }
 
   try {
     console.log('Finding missing DEX mappings by comparing devices with DEX data...');
 
     // Get all devices first
-    const devicesResponse = await fetch(`${req.headers.origin || 'http://localhost:3300'}/api/cantaloupe/devices-raw`, {
+    const devicesResponse = await fetch(`${request.headers.get('origin') || 'http://localhost:3300'}/api/cantaloupe/devices-raw`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(req.body)
+      body: JSON.stringify(await request.json())
     });
 
     const devicesData = await devicesResponse.json();
     if (!devicesData.success) {
-      return res.status(500).json({ error: 'Failed to fetch devices data' });
+      return new Response(JSON.stringify({ error: 'Failed to fetch devices data' }), { status: 500, headers: { "Content-Type": "application/json" } });
     }
 
     // Extract all case serials from devices

@@ -1,14 +1,14 @@
 
 export const runtime = 'edge';
 
-export default async function handler(req, res) {
-  if (req.method !== 'GET' && req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
+export default async function handler(request) {
+  if (request.method !== 'GET' && request.method !== 'POST') {
+    return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405, headers: { "Content-Type": "application/json" } });
   }
 
   try {
     console.log('Authenticating for serial number capture...');
-    const authResponse = await fetch(`${req.headers.origin || 'http://localhost:3300'}/api/cantaloupe/auth`, {
+    const authResponse = await fetch(`${request.headers.get('origin') || 'http://localhost:3300'}/api/cantaloupe/auth`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -18,7 +18,7 @@ export default async function handler(req, res) {
     const authData = await authResponse.json();
 
     if (!authData.success) {
-      return res.status(401).json({ error: 'Authentication failed' });
+      return new Response(JSON.stringify({ error: 'Authentication failed' }), { status: 401, headers: { "Content-Type": "application/json" } });
     }
 
     const cookies = authData.cookies;

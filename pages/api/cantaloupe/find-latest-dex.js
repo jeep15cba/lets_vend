@@ -1,26 +1,27 @@
 
 export const runtime = 'edge';
 
-export default async function handler(req, res) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
+export default async function handler(request) {
+  if (request.method !== 'POST') {
+    return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405, headers: { "Content-Type": "application/json" } });
   }
 
-  const { caseSerial } = req.body;
+  const body = await request.json();
+  const { caseSerial } = body;
 
   if (!caseSerial) {
-    return res.status(400).json({ error: 'caseSerial is required' });
+    return new Response(JSON.stringify({ error: 'caseSerial is required' }), { status: 400, headers: { "Content-Type": "application/json" } });
   }
 
   try {
     console.log(`Finding latest DEX for case serial: ${caseSerial}`);
 
     // Get cookies from request body or authenticate to get new cookies
-    let cookies = req.body?.cookies;
+    let cookies = body.cookies;
 
     if (!cookies) {
       console.log('No cookies provided, authenticating for DEX search...');
-      const authResponse = await fetch(`${req.headers.origin || 'http://localhost:3300'}/api/cantaloupe/auth`, {
+      const authResponse = await fetch(`${request.headers.get('origin') || 'http://localhost:3300'}/api/cantaloupe/auth`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -30,7 +31,7 @@ export default async function handler(req, res) {
       const authData = await authResponse.json();
 
       if (!authData.success) {
-        return res.status(401).json({ error: 'Authentication failed' });
+        return new Response(JSON.stringify({ error: 'Authentication failed' }), { status: 401, headers: { "Content-Type": "application/json" } });
       }
 
       cookies = authData.cookies;

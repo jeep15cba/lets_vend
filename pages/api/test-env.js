@@ -1,8 +1,11 @@
 export const runtime = 'edge';
 
-export default async function handler(req, res) {
-  if (req.method !== 'GET') {
-    return res.status(405).json({ error: 'Method not allowed' });
+export default async function handler(request) {
+  if (request.method !== 'GET') {
+    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
+      status: 405,
+      headers: { 'Content-Type': 'application/json' }
+    });
   }
 
   try {
@@ -23,7 +26,7 @@ export default async function handler(req, res) {
         hasSiteUrl: !!process.env.NEXT_PUBLIC_SITE_URL,
         siteUrl: process.env.NEXT_PUBLIC_SITE_URL || 'not-set',
         nodeEnv: process.env.NODE_ENV || 'unknown',
-        origin: req.headers?.origin || 'no-origin'
+        origin: request.headers?.get('origin') || 'no-origin'
       };
     } catch (envError) {
       envCheck = {
@@ -31,15 +34,20 @@ export default async function handler(req, res) {
       };
     }
 
-    return res.status(200).json({
+    return new Response(JSON.stringify({
       ...basicInfo,
       environment: envCheck
+    }), {
+      headers: { 'Content-Type': 'application/json' }
     });
 
   } catch (error) {
-    return res.status(500).json({
+    return new Response(JSON.stringify({
       error: 'Environment test failed: ' + error.message,
       stack: error.stack
+    }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
     });
   }
 }

@@ -1,9 +1,12 @@
 
 export const runtime = 'edge';
 
-export default async function handler(req, res) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
+export default async function handler(request) {
+  if (request.method !== 'POST') {
+    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
+      status: 405,
+      headers: { 'Content-Type': 'application/json' }
+    });
   }
 
   const username = process.env.CANTALOUPE_USERNAME;
@@ -15,17 +18,20 @@ export default async function handler(req, res) {
     usernameLength: username ? username.length : 0,
     environment: process.env.NODE_ENV,
     hasSiteUrl: !!process.env.NEXT_PUBLIC_SITE_URL,
-    origin: req.headers.origin
+    origin: request.headers.get('origin')
   });
 
   if (!username || !password) {
-    return res.status(500).json({
+    return new Response(JSON.stringify({
       error: 'Missing credentials in environment variables',
       debug: {
         hasUsername: !!username,
         hasPassword: !!password,
         environment: process.env.NODE_ENV
       }
+    }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
     });
   }
 
@@ -110,20 +116,28 @@ export default async function handler(req, res) {
 
       console.log('Final combined cookies:', allCookies?.substring(0, 200) + '...');
 
-      res.status(200).json({
+      return new Response(JSON.stringify({
         success: true,
         cookies: allCookies,
         message: 'Authentication successful'
+      }), {
+        headers: { 'Content-Type': 'application/json' }
       });
     } else {
       console.error('Authentication failed, status:', loginResponse.status);
       const responseText = await loginResponse.text();
       console.error('Response body:', responseText.substring(0, 200));
-      res.status(401).json({ error: 'Authentication failed' });
+      return new Response(JSON.stringify({ error: 'Authentication failed' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' }
+      });
     }
 
   } catch (error) {
     console.error('Auth error:', error);
-    res.status(500).json({ error: 'Authentication error: ' + error.message });
+    return new Response(JSON.stringify({ error: 'Authentication error: ' + error.message }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    });
   }
 }

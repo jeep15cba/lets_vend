@@ -1,9 +1,12 @@
 export const runtime = 'edge';
 
-export default function handler(req, res) {
+export default function handler(request) {
   // Only test environment variable access, no actual authentication
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
+  if (request.method !== 'POST') {
+    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
+      status: 405,
+      headers: { 'Content-Type': 'application/json' }
+    });
   }
 
   try {
@@ -11,7 +14,7 @@ export default function handler(req, res) {
     const password = process.env.CANTALOUPE_PASSWORD;
 
     if (!username || !password) {
-      return res.status(400).json({
+      return new Response(JSON.stringify({
         error: 'Missing credentials in environment variables',
         debug: {
           hasUsername: !!username,
@@ -19,11 +22,14 @@ export default function handler(req, res) {
           usernameLength: username ? username.length : 0,
           passwordLength: password ? password.length : 0
         }
+      }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' }
       });
     }
 
     // Return success without doing actual authentication
-    return res.status(200).json({
+    return new Response(JSON.stringify({
       success: true,
       message: 'Environment variables accessible',
       debug: {
@@ -32,12 +38,17 @@ export default function handler(req, res) {
         usernamePreview: username.substring(0, 5) + '...',
         timestamp: new Date().toISOString()
       }
+    }), {
+      headers: { 'Content-Type': 'application/json' }
     });
 
   } catch (error) {
-    return res.status(500).json({
+    return new Response(JSON.stringify({
       error: 'Environment variable access failed',
       message: error.message
+    }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
     });
   }
 }

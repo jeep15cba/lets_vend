@@ -1,18 +1,25 @@
 
 export const runtime = 'edge';
 
-export default async function handler(req, res) {
-  if (req.method !== 'GET' && req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
+export default async function handler(request) {
+  if (request.method !== 'GET' && request.method !== 'POST') {
+    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
+      status: 405,
+      headers: { 'Content-Type': 'application/json' }
+    });
   }
 
   try {
     // Get cookies from request body or authenticate to get new cookies
-    let cookies = req.body?.cookies;
+    let cookies;
+    if (request.method === 'POST') {
+      const body = await request.json().catch(() => ({}));
+      cookies = body.cookies;
+    }
 
     if (!cookies) {
       console.log('No cookies provided, authenticating for devices data access...');
-      const authResponse = await fetch(`${req.headers.origin || 'http://localhost:3300'}/api/cantaloupe/auth`, {
+      const authResponse = await fetch(`${request.headers.get('origin') || 'http://localhost:3300'}/api/cantaloupe/auth`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -22,7 +29,10 @@ export default async function handler(req, res) {
       const authData = await authResponse.json();
 
       if (!authData.success) {
-        return res.status(401).json({ error: 'Authentication failed' });
+        return new Response(JSON.stringify({ error: 'Authentication failed' }), {
+          status: 401,
+          headers: { 'Content-Type': 'application/json' }
+        });
       }
 
       cookies = authData.cookies;
@@ -108,7 +118,10 @@ export default async function handler(req, res) {
     console.log('Devices data response status:', response.status);
 
     if (response.status === 401 || response.status === 403) {
-      return res.status(401).json({ error: 'Authentication required - please check credentials' });
+      return new Response(JSON.stringify({ error: 'Authentication required - please check credentials' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' }
+      });
     }
 
     if (!response.ok) {
@@ -127,9 +140,12 @@ export default async function handler(req, res) {
         console.error('Could not parse error as JSON');
       }
 
-      return res.status(response.status).json({
+      return new Response(JSON.stringify({
         error: `Failed to fetch devices data: ${response.statusText}`,
         details: errorDetails
+      }), {
+        status: response.status,
+        headers: { 'Content-Type': 'application/json' }
       });
     }
 
@@ -138,27 +154,34 @@ export default async function handler(req, res) {
     if (contentType.includes('application/json')) {
       const data = await response.json();
       console.log('Devices data retrieved successfully (JSON format)');
-      res.status(200).json({
+      return new Response(JSON.stringify({
         success: true,
         data: data,
         type: 'json',
         timestamp: new Date().toISOString()
+      }), {
+        headers: { 'Content-Type': 'application/json' }
       });
     } else {
       const data = await response.text();
       console.log('Devices data retrieved successfully (text format), length:', data.length);
-      res.status(200).json({
+      return new Response(JSON.stringify({
         success: true,
         rawData: data,
         type: 'text',
         timestamp: new Date().toISOString()
+      }), {
+        headers: { 'Content-Type': 'application/json' }
       });
     }
 
   } catch (error) {
     console.error('Devices data fetch error:', error);
-    res.status(500).json({
+    return new Response(JSON.stringify({
       error: 'Failed to fetch devices data: ' + error.message
+    }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
     });
   }
 }

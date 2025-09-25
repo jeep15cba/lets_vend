@@ -1,18 +1,25 @@
 
 export const runtime = 'edge';
 
-export default async function handler(req, res) {
-  if (req.method !== 'GET' && req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
+export default async function handler(request) {
+  if (request.method !== 'GET' && request.method !== 'POST') {
+    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
+      status: 405,
+      headers: { 'Content-Type': 'application/json' }
+    });
   }
 
   try {
     // Get cookies from request body or authenticate to get new cookies
-    let cookies = req.body?.cookies;
+    let cookies;
+    if (request.method === 'POST') {
+      const body = await request.json().catch(() => ({}));
+      cookies = body.cookies;
+    }
 
     if (!cookies) {
       console.log('No cookies provided, authenticating for devices raw data...');
-      const authResponse = await fetch(`${req.headers.origin || 'http://localhost:3300'}/api/cantaloupe/auth`, {
+      const authResponse = await fetch(`${request.headers.get('origin') || 'http://localhost:3300'}/api/cantaloupe/auth`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -22,7 +29,10 @@ export default async function handler(req, res) {
       const authData = await authResponse.json();
 
       if (!authData.success) {
-        return res.status(401).json({ error: 'Authentication failed' });
+        return new Response(JSON.stringify({ error: 'Authentication failed' }), {
+          status: 401,
+          headers: { 'Content-Type': 'application/json' }
+        });
       }
 
       cookies = authData.cookies;
@@ -148,10 +158,13 @@ export default async function handler(req, res) {
     console.log('Response preview:', responseText.substring(0, 500));
 
     if (!response.ok) {
-      return res.status(response.status).json({
+      return new Response(JSON.stringify({
         error: `HTTP ${response.status}: ${response.statusText}`,
         rawResponse: responseText,
         headers: Object.fromEntries(response.headers.entries())
+      }), {
+        status: response.status,
+        headers: { 'Content-Type': 'application/json' }
       });
     }
 
@@ -162,28 +175,35 @@ export default async function handler(req, res) {
       console.log('Successfully parsed JSON response');
     } catch (parseError) {
       console.error('Failed to parse as JSON:', parseError.message);
-      return res.status(200).json({
+      return new Response(JSON.stringify({
         success: true,
         type: 'text',
         rawResponse: responseText,
         parseError: parseError.message,
         timestamp: new Date().toISOString()
+      }), {
+        headers: { 'Content-Type': 'application/json' }
       });
     }
 
     // Return the parsed JSON data
-    res.status(200).json({
+    return new Response(JSON.stringify({
       success: true,
       type: 'json',
       data: jsonData,
       responseLength: responseText.length,
       timestamp: new Date().toISOString()
+    }), {
+      headers: { 'Content-Type': 'application/json' }
     });
 
   } catch (error) {
     console.error('Raw devices fetch error:', error);
-    res.status(500).json({
+    return new Response(JSON.stringify({
       error: 'Failed to fetch raw devices data: ' + error.message
+    }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
     });
   }
 }
