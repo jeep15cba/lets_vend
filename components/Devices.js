@@ -75,64 +75,57 @@ export default function Devices() {
     }
   };
 
-  // Load machine type and cash enabled data from mapping files
+  // Load machine summaries from new lightweight API
   const loadMachineData = async () => {
     try {
-      // Load the restructured mapping file and comprehensive DEX data
-      const [dexMappingResponse, comprehensiveDexResponse] = await Promise.all([
+      const [mappingResponse, summaryResponse] = await Promise.all([
         axios.get('/data/case-serial-dex-mapping-new.json'),
-        axios.get('/data/comprehensive-dex-data.json').catch(() => ({ data: { results: {} } })) // Fallback if DEX data doesn't exist
+        axios.get('/api/machines/summary').catch(() => ({ data: { data: {} } }))
       ]);
 
-      const mappingData = dexMappingResponse.data;
-      const comprehensiveDexData = comprehensiveDexResponse.data;
+      const mappingData = mappingResponse.data;
+      const summaryData = summaryResponse.data;
 
-      // Handle both old and new data structures
+      // Combine mapping data with API summary data
+      const combinedData = {};
+
+      // Process mapping data for machine types and locations
       if (mappingData.machines) {
-        // New structure with separate details and dex
-        return {
-          machines: mappingData.machines,
-          dexData: comprehensiveDexData.results || {}
-        };
-      } else if (mappingData.mappings) {
-        // Old structure - convert to new format for compatibility
-        const convertedData = {};
-        Object.keys(mappingData.mappings).forEach(caseSerial => {
-          const records = mappingData.mappings[caseSerial];
-          const latestRecord = records[0];
-
-          convertedData[caseSerial] = {
-            details: {
-              machineType: latestRecord.machineType || 'unknown',
-              machineModel: latestRecord.machineModel || 'Unknown Model',
-              machineLocation: latestRecord.machineLocation || 'Unknown Location',
-              cashEnabled: latestRecord.cashEnabled || false,
-              status: 'active',
-              lastUpdated: latestRecord.timestamp || new Date().toISOString()
+        Object.entries(mappingData.machines).forEach(([caseSerial, machineInfo]) => {
+          combinedData[caseSerial] = {
+            details: machineInfo.details || {
+              machineType: 'unknown',
+              machineModel: 'Unknown Model',
+              machineLocation: 'Unknown Location',
+              cashEnabled: false
             },
-            dex: records.map(record => ({
-              dexId: record.dexId,
-              timestamp: record.timestamp,
-              firmware: record.firmware,
-              parsed: record.parsed,
-              status: record.status || null,
-              note: record.note || null
-            })).filter(record => record.dexId !== null)
+            summary: summaryData.data[caseSerial] || null
           };
         });
-        return {
-          machines: convertedData,
-          dexData: comprehensiveDexData.results || {}
-        };
       }
 
+      // Add any machines from summary that aren't in mapping
+      Object.entries(summaryData.data || {}).forEach(([caseSerial, summary]) => {
+        if (!combinedData[caseSerial]) {
+          combinedData[caseSerial] = {
+            details: {
+              machineType: 'unknown',
+              machineModel: 'Unknown Model',
+              machineLocation: summary.customerName || 'Unknown Location',
+              cashEnabled: !!summary.cash
+            },
+            summary
+          };
+        }
+      });
+
       return {
-        machines: {},
-        dexData: {}
+        machines: combinedData,
+        lastUpdated: summaryData.lastUpdated
       };
     } catch (error) {
       console.error('Failed to load machine data:', error);
-      return {};
+      return { machines: {} };
     }
   };
 
@@ -245,16 +238,15 @@ export default function Devices() {
             const dex = deviceData.dexRaw;
             const caseSerial = device.caseSerial;
 
-            // Get machine data from our mapping
-            const mappingData = devicesData?.machineMapping?.machines?.[caseSerial];
-            const machineType = mappingData?.details?.machineType || 'unknown';
-            const machineModel = mappingData?.details?.machineModel || 'Unknown Model';
-            const cashEnabled = mappingData?.details?.cashEnabled || false;
-            const machineLocation = mappingData?.details?.machineLocation || customer?.name || 'Unknown Location';
+            // Get machine data from our new API structure
+            const machineData = devicesData?.machineMapping?.machines?.[caseSerial];
+            const machineType = machineData?.details?.machineType || 'unknown';
+            const machineModel = machineData?.details?.machineModel || 'Unknown Model';
+            const cashEnabled = machineData?.details?.cashEnabled || false;
+            const machineLocation = machineData?.details?.machineLocation || customer?.name || 'Unknown Location';
 
-            // Get DEX data for cash denominations and other info
-            const dexData = devicesData?.machineMapping?.dexData?.[caseSerial];
-            const latestDexData = dexData?.latestDexData?.parsedData?.general;
+            // Get summary data from API
+            const summary = machineData?.summary;
 
 
             // Calculate if DEX data exists within last 4 hours
@@ -348,61 +340,30 @@ export default function Devices() {
 
                   {/* Temperature */}
                   <div>
-                    {latestDexData?.MA5 ? (
+                    {summary?.temperature ? (
                       <div className="space-y-1">
                         <div className="text-xs font-medium text-gray-700 mb-1">
                           {machineType === 'food' ? 'Food Temperature:' : 'Beverage Temperature:'}
                         </div>
 
-                        {machineType === 'food' ? (
-                          // Food machines: Look for DESIRED TEMPERATURE and DETECTED TEMPERATURE records
-                          latestDexData.MA5
-                            .filter(record => record['1'] && record['1'].includes('TEMPERATURE'))
-                            .map((tempRecord, idx) => {
-                              const tempType = tempRecord['1'];
-                              const tempValue = tempRecord['2'];
-                              const tempUnit = tempRecord['3'];
-
-                              // Convert temperature: 400 = 4.00°C
-                              const displayTemp = tempValue ? (parseInt(tempValue.trim()) / 100).toFixed(1) : 'N/A';
-
-                              return (
-                                <div key={idx} className="text-xs">
-                                  <div className="flex justify-between">
-                                    <span className="text-gray-600">
-                                      {tempType === 'DESIRED TEMPERATURE' ? 'Target:' : 'Current:'}
-                                    </span>
-                                    <span className="font-mono text-gray-900">
-                                      {displayTemp}°{tempUnit}
-                                    </span>
-                                  </div>
-                                </div>
-                              );
-                            })
-                        ) : (
-                          // Beverage machines: Look for TEMP record
-                          (() => {
-                            const tempRecord = latestDexData.MA5.find(record => record['1'] === 'TEMP');
-                            if (tempRecord) {
-                              const tempValue = tempRecord['2'];
-                              const tempUnit = tempRecord['3'];
-                              // Convert temperature: 40 = 4.0°C
-                              const displayTemp = tempValue ? (parseInt(tempValue.trim()) / 10).toFixed(1) : 'N/A';
-
-                              return (
-                                <div className="text-xs">
-                                  <div className="flex justify-between">
-                                    <span className="text-gray-600">Current:</span>
-                                    <span className="font-mono text-gray-900">
-                                      {displayTemp}°{tempUnit}
-                                    </span>
-                                  </div>
-                                </div>
-                              );
-                            }
-                            return null;
-                          })()
-                        )}
+                        <div className="text-xs space-y-0.5">
+                          {summary.temperature.current && (
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">Current:</span>
+                              <span className="font-mono text-gray-900">
+                                {summary.temperature.current}°{summary.temperature.unit}
+                              </span>
+                            </div>
+                          )}
+                          {summary.temperature.target && (
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">Target:</span>
+                              <span className="font-mono text-gray-900">
+                                {summary.temperature.target}°{summary.temperature.unit}
+                              </span>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     ) : (
                       <div>
@@ -418,42 +379,33 @@ export default function Devices() {
 
                   {/* Cash Amount */}
                   <div>
-                    {cashEnabled && latestDexData?.CA17 ? (
+                    {cashEnabled && summary?.cash ? (
                       <div className="space-y-1">
                         <div className="text-xs font-medium text-gray-700 mb-1">Cash Denominations:</div>
                         <div className="space-y-0.5 text-xs">
                           <div className="flex justify-between">
                             <span>$0.10:</span>
-                            <span className="font-mono">{latestDexData.CA17['1'] || '0'}</span>
+                            <span className="font-mono">{summary.cash.denominations['0.10'] || '0'}</span>
                           </div>
                           <div className="flex justify-between">
                             <span>$0.20:</span>
-                            <span className="font-mono">{latestDexData.CA17['2'] || '0'}</span>
+                            <span className="font-mono">{summary.cash.denominations['0.20'] || '0'}</span>
                           </div>
                           <div className="flex justify-between">
                             <span>$0.50:</span>
-                            <span className="font-mono">{latestDexData.CA17['3'] || '0'}</span>
+                            <span className="font-mono">{summary.cash.denominations['0.50'] || '0'}</span>
                           </div>
                           <div className="flex justify-between">
                             <span>$1.00:</span>
-                            <span className="font-mono">{latestDexData.CA17['4'] || '0'}</span>
+                            <span className="font-mono">{summary.cash.denominations['1.00'] || '0'}</span>
                           </div>
                           <div className="flex justify-between">
                             <span>$2.00:</span>
-                            <span className="font-mono">{latestDexData.CA17['5'] || '0'}</span>
+                            <span className="font-mono">{summary.cash.denominations['2.00'] || '0'}</span>
                           </div>
                         </div>
                         <div className="text-xs text-green-600 font-medium pt-1 border-t border-gray-200">
-                          Total: ${(() => {
-                            const coins = latestDexData.CA17;
-                            const total =
-                              (parseInt(coins['1'] || '0') * 0.10) +
-                              (parseInt(coins['2'] || '0') * 0.20) +
-                              (parseInt(coins['3'] || '0') * 0.50) +
-                              (parseInt(coins['4'] || '0') * 1.00) +
-                              (parseInt(coins['5'] || '0') * 2.00);
-                            return total.toFixed(2);
-                          })()}
+                          Total: ${summary.cash.total.toFixed(2)}
                         </div>
                       </div>
                     ) : cashEnabled ? (
@@ -492,33 +444,16 @@ export default function Devices() {
                         let errorCount = 0;
                         let errorData = [];
 
-                        if (machineType === 'bev' && latestDexData?.MA5) {
-                          const errorRecords = latestDexData.MA5.filter(record => record['1'] === 'ERROR');
-                          if (errorRecords.length > 0) {
-                            hasErrors = true;
-                            errorCount = errorRecords.length;
-                            errorData = errorRecords.map((errorRecord, idx) => ({
-                              id: `bev-${idx}`,
-                              code: errorRecord['2'],
-                              type: 'beverage'
-                            }));
-                          }
-                        } else if (machineType === 'food' && latestDexData) {
-                          const errorFields = ['EA1', 'EA2', 'EA3', 'EA4', 'EA5', 'EA6', 'EA7', 'EA8', 'EA9'];
-                          const foundErrors = [];
-                          errorFields.forEach(eaField => {
-                            if (latestDexData[eaField]) {
-                              foundErrors.push({
-                                errorCode: eaField,
-                                data: latestDexData[eaField]
-                              });
-                            }
-                          });
-                          if (foundErrors.length > 0) {
-                            hasErrors = true;
-                            errorCount = foundErrors.length;
-                            errorData = foundErrors;
-                          }
+                        if (summary?.errors && summary.errors.length > 0) {
+                          hasErrors = true;
+                          errorCount = summary.errors.length;
+                          errorData = summary.errors.map((error, idx) => ({
+                            id: `${error.type}-${idx}`,
+                            code: error.code,
+                            type: error.type,
+                            description: error.description,
+                            data: error.data || []
+                          }));
                         }
 
                         const accordionId = `dex-error-${device.id || caseSerial}`;
@@ -550,30 +485,33 @@ export default function Devices() {
                             {isExpanded && (
                               <div className="mt-2 space-y-1 text-xs">
                                 {hasErrors ? (
-                                  machineType === 'bev' ? (
-                                    errorData.map((error, idx) => (
-                                      <div key={idx} className="bg-red-50 border border-red-200 rounded px-2 py-1">
-                                        <span className="font-mono text-red-800">
-                                          {error.code}
-                                        </span>
+                                  errorData.map((error, idx) => (
+                                    <div key={idx} className="bg-red-50 border border-red-200 rounded px-2 py-1">
+                                      <div className="font-mono text-red-800 font-medium">
+                                        {error.code}
                                       </div>
-                                    ))
-                                  ) : (
-                                    errorData.map((error, idx) => (
-                                      <div key={idx} className="bg-red-50 border border-red-200 rounded px-2 py-1">
-                                        <div className="font-mono text-red-800 font-medium">
-                                          {error.errorCode}
-                                        </div>
+                                      <div className="text-gray-500 text-xs mt-1">
+                                        {error.description}
+                                      </div>
+                                      {error.data && error.data.length > 0 && (
                                         <div className="text-gray-500 text-xs mt-1">
-                                          {Object.entries(error.data).map(([key, value]) => (
-                                            <span key={key} className="mr-2">
-                                              {key}:{value}
-                                            </span>
-                                          ))}
+                                          {Array.isArray(error.data) ? (
+                                            error.data.map((value, dataIdx) => (
+                                              <span key={dataIdx} className="mr-2">
+                                                {dataIdx+1}:{value}
+                                              </span>
+                                            ))
+                                          ) : (
+                                            Object.entries(error.data || {}).map(([key, value]) => (
+                                              <span key={key} className="mr-2">
+                                                {key}:{value}
+                                              </span>
+                                            ))
+                                          )}
                                         </div>
-                                      </div>
-                                    ))
-                                  )
+                                      )}
+                                    </div>
+                                  ))
                                 ) : (
                                   <div className="text-green-600 bg-green-50 border border-green-200 rounded px-2 py-1">
                                     ✓ No DEX errors detected

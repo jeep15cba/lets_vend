@@ -5,212 +5,347 @@ This document explains the complete process for fetching DEX (Data Exchange) dat
 ## Overview
 
 DEX data contains critical machine information including:
-- **CA17**: Cash denomination data (coin counts: $0.10, $0.20, $0.50, $1.00, $2.00)
-- **CA1**: Cash box data
-- **CA2**: Cash sales data
-- **Temperature data**
-- **Error codes**
-- **Product sales data**
+- **DXS**: Header with device identifiers and version info
+- **ST**: Start transaction data
+- **BA1**: Bill acceptor data
+- **CA1-CA15**: Cashless/card reader data sections
+- **CB1**: Coin mechanism data
+- **DA2**: Device activity data
+- **MA5**: Machine status (temperature readings)
+- **PA1-PA2**: Product activity data
+- **Raw telemetry**: Complete vending machine operational data
 
-## Process Flow
+## Modern Process Flow (2025)
 
-### 1. Fetch Live DEX List
-**Script**: `scripts/fetch-real-dex-list.js`
-**Purpose**: Get complete DEX record list from live Cantaloupe API
+### 1. Get Latest DEX Metadata
+**API Endpoint**: `/api/cantaloupe/dex-raw`
+**Purpose**: Fetch DEX metadata including latest DEX IDs for each machine
 
 ```bash
-node scripts/fetch-real-dex-list.js
+curl -X POST "http://localhost:3300/api/cantaloupe/dex-raw?length=1000" \
+     -H "Content-Type: application/json" \
+     -d '{"cookies": "auth_cookies_here"}'
 ```
 
 **What it does**:
-- Calls the existing `api/cantaloupe/dex-raw` endpoint
-- Fetches up to 10,000 recent DEX records from live API
-- Creates mapping of case serial → DEX ID
-- Saves to `data/live-case-serial-dex-mapping.json`
+- Calls Cantaloupe `/dex` endpoint with DataTables parameters
+- Fetches up to 1000 recent DEX records with metadata
+- Groups by machine (caseSerial) to find latest DEX ID for each
+- Returns metadata including DEX IDs, timestamps, parsing status
 
-**Output**:
+**Response Format**:
 ```json
 {
-  "timestamp": "2025-09-24T07:16:22.703Z",
-  "stats": {
-    "totalDexRecords": 707,
-    "uniqueMachines": 51,
-    "ourMachinesMatched": 51
-  },
-  "mapping": {
-    "CSA200202661": {
-      "dexId": "23051244",
-      "timestamp": "2025-09-24 07:16:14",
-      "firmware": "1.0.119",
-      "parsed": false,
-      "customer": "Isavend"
+  "success": true,
+  "data": {
+    "recordsTotal": 47214,
+    "data": [
+      {
+        "devices": {"caseSerial": "552234133196"},
+        "customers": {"name": "Isavend"},
+        "dexRaw": {
+          "id": 23204016,
+          "created": "2025-09-27 02:07:07",
+          "parsed": 1,
+          "uploadReason": 0,
+          "dexSource": "Device",
+          "firmware": "1.8.18.1"
+        }
+      }
+    ]
+  }
+}
+```
+
+### 2. Fetch Actual Raw DEX Content
+**API Endpoint**: `/api/fetch-raw-dex-content`
+**Purpose**: Use DEX IDs to fetch actual raw DEX content for each machine
+
+```bash
+curl -X POST "http://localhost:3300/api/fetch-raw-dex-content" \
+     -H "Content-Type: application/json" \
+     -H "Origin: http://localhost:3300"
+```
+
+**What it does**:
+- Reads latest DEX IDs from `comprehensive-raw-dex-data.json`
+- Authenticates with Cantaloupe dashboard and extracts CSRF token
+- Makes requests to `/dex/getRawDex/{dexId}` for each machine
+- Updates file with actual raw DEX content
+
+**Output File**: `public/data/comprehensive-raw-dex-data.json`
+```json
+{
+  "timestamp": "2025-09-27T02:07:07.000Z",
+  "note": "Comprehensive list of all machines with latest DEX ID and actual raw DEX content",
+  "totalMachines": 49,
+  "machines": {
+    "552234133196": {
+      "caseSerial": "552234133196",
+      "customerName": "Isavend",
+      "latestDexId": 23204016,
+      "latestDexCreated": "2025-09-27 02:07:07",
+      "latestDexMetadata": {
+        "parsed": 1,
+        "uploadReason": 0,
+        "dexSource": "Device",
+        "firmware": "1.8.18.1"
+      },
+      "rawDexContent": "DXS*RST7654321*VA*V0/6*1\r\nST*001*0001\r\nBA1*0350Y500014 *T7          *1200\r\nCA1*3040GD25630 *GRYPHON 3C3 *1070\r\nCA2*216520*633*0*0\r\nCA3*0*0*0*0*406760*39080*146680*221000\r\n...",
+      "rawDexType": "text",
+      "fetchedAt": "2025-09-27T02:22:58.410Z"
     }
   }
 }
 ```
 
-### 2. Fetch Missing Parsed DEX Data
-**Script**: `scripts/fetch-missing-dex-using-live-mapping.js`
-**Purpose**: Use live mapping to fetch parsed DEX data for machines missing it
-
-```bash
-node scripts/fetch-missing-dex-using-live-mapping.js
-```
-
-**What it does**:
-- Loads current machine inventory from `public/data/case-serial-dex-mapping-new.json`
-- Loads live DEX ID mapping from step 1
-- Identifies machines without parsed DEX data
-- Fetches parsed data using `api/cantaloupe/get-parsed-dex`
-- Updates `public/data/comprehensive-dex-data.json`
-
 ## API Endpoints Used
 
 ### `/api/cantaloupe/dex-raw`
-- **Method**: GET
-- **Purpose**: Fetch raw DEX records from live Cantaloupe API
-- **Parameters**:
-  - `length`: Number of records (default: 100, use 10000 for complete list)
-  - `start`: Starting record offset
-- **Returns**: JSON with DEX records including case serials and DEX IDs
-
-### `/api/cantaloupe/get-parsed-dex`
 - **Method**: POST
-- **Purpose**: Get parsed/structured DEX data for a specific DEX ID
-- **Body**: `{ "dexId": "23051244" }`
-- **Returns**: Structured DEX data with CA17, CA1, CA2 fields
+- **Purpose**: Fetch DEX metadata from live Cantaloupe API
+- **Parameters**:
+  - `length`: Number of records (default: 100, use 1000 for comprehensive list)
+  - `start`: Starting record offset (optional)
+- **Body**: `{ "cookies": "auth_cookies_here" }` (optional, will auto-authenticate)
+- **Returns**: JSON with DEX metadata including case serials, DEX IDs, timestamps
+- **Cantaloupe Endpoint**: `https://dashboard.cantaloupe.online/dex` (POST with DataTables format)
+
+### `/api/fetch-raw-dex-content`
+- **Method**: POST
+- **Purpose**: Fetch actual raw DEX content using DEX IDs
+- **Authentication**: Automatic (calls `/api/cantaloupe/auth` internally)
+- **Process**:
+  1. Loads DEX IDs from comprehensive-raw-dex-data.json
+  2. Extracts CSRF token from dashboard
+  3. Calls `/dex/getRawDex/{dexId}` for each machine
+- **Returns**: Complete machine data with raw DEX content
+- **Cantaloupe Endpoint**: `https://dashboard.cantaloupe.online/dex/getRawDex/{dexId}` (POST with CSRF)
 
 ### `/api/cantaloupe/auth`
 - **Method**: POST
 - **Purpose**: Authenticate with Cantaloupe dashboard
+- **Environment Variables Required**:
+  - `CANTALOUPE_USERNAME`
+  - `CANTALOUPE_PASSWORD`
 - **Returns**: Session cookies for API access
+- **Process**: Performs login and extracts session cookies
+
+### `/api/cantaloupe/dex-data` (Individual Machine)
+- **Method**: POST
+- **Purpose**: Get raw DEX content for a specific machine
+- **Parameters**: `?machineId=CSA200202688`
+- **Body**: `{ "cookies": "auth_cookies_here" }` (optional)
+- **Returns**: Raw DEX data for single machine
+- **Cantaloupe Endpoint**: `https://dashboard.cantaloupe.online/dex/getRawDex/{machineId}`
 
 ## File Structure
 
 ```
-├── scripts/
-│   ├── fetch-real-dex-list.js              # Step 1: Get live DEX mapping
-│   ├── update-mapping-with-live-dex.js     # Step 2: Update mapping file
-│   ├── fetch-missing-dex-using-live-mapping.js # Step 3: Fetch missing parsed data
-│   ├── fetch-all-dex-data.js               # Legacy: Fetch all DEX data
-│   └── fetch-missing-dex-data.js           # Legacy: Use mock API
-├── data/
-│   └── live-case-serial-dex-mapping.json   # Live DEX ID mapping
+├── pages/api/
+│   ├── fetch-raw-dex-content.js            # NEW: Fetch actual raw DEX content
+│   ├── generate-comprehensive-raw-dex.js   # Generate comprehensive DEX metadata
+│   ├── update-comprehensive-raw-dex.js     # Update existing comprehensive data
+│   └── cantaloupe/
+│       ├── dex-raw.js                      # DEX metadata API
+│       ├── dex-data.js                     # Individual machine DEX data
+│       └── auth.js                         # Authentication
 ├── public/data/
-│   ├── case-serial-dex-mapping-new.json    # Machine inventory
-│   └── comprehensive-dex-data.json         # Complete parsed DEX data
-└── pages/api/cantaloupe/
-    ├── dex-raw.js                          # Live DEX list API
-    ├── get-parsed-dex.js                   # Parse specific DEX ID
-    └── auth.js                             # Authentication
+│   ├── comprehensive-raw-dex-data.json     # MAIN: Latest DEX IDs + raw content
+│   └── comprehensive-dex-data.json         # LEGACY: Parsed DEX data
+└── docs/
+    └── DEX-DATA-FETCHING.md                # This documentation
 ```
 
-## Data Flow
+## Data Flow (Modern 2025)
 
 ```
-Live Cantaloupe API
+Cantaloupe Dashboard API
         ↓
-  dex-raw.js endpoint
+1. /api/cantaloupe/dex-raw
+   (Get DEX metadata & IDs)
         ↓
-fetch-real-dex-list.js
+2. comprehensive-raw-dex-data.json
+   (Latest DEX ID for each machine)
         ↓
-live-case-serial-dex-mapping.json
+3. /api/fetch-raw-dex-content
+   (Fetch actual raw DEX using IDs)
         ↓
-fetch-missing-dex-using-live-mapping.js
+4. comprehensive-raw-dex-data.json
+   (Complete with raw DEX content)
         ↓
-comprehensive-dex-data.json
-        ↓
-    /devices page
+5. /devices page & components
+   (Display real machine data)
 ```
 
-## Complete Process
+## Complete Process (Modern 2025)
 
-### Full Refresh (when needed)
+### Option 1: API Endpoints (Recommended)
 ```bash
-# Step 1: Get latest DEX IDs from live API
-node scripts/fetch-real-dex-list.js
+# Step 1: Generate/update comprehensive DEX metadata file
+curl -X POST "http://localhost:3300/api/generate-comprehensive-raw-dex"
 
-# Step 2: Update mapping file with live DEX data
-node scripts/update-mapping-with-live-dex.js
-
-# Step 3: Fetch parsed data for missing machines
-node scripts/fetch-missing-dex-using-live-mapping.js
+# Step 2: Fetch actual raw DEX content for all machines
+curl -X POST "http://localhost:3300/api/fetch-raw-dex-content"
 ```
 
-### Quick Update (daily/regular)
+### Option 2: Individual Updates
 ```bash
-# Only fetch missing data using existing mapping
-node scripts/fetch-missing-dex-using-live-mapping.js
+# Update just the metadata (DEX IDs and timestamps)
+curl -X POST "http://localhost:3300/api/update-comprehensive-raw-dex"
 
-# Optional: Update mapping if new machines found
-node scripts/update-mapping-with-live-dex.js
+# Get raw DEX for specific machine
+curl -X POST "http://localhost:3300/api/cantaloupe/dex-data?machineId=CSA200202688"
+```
+
+### Option 3: Direct Cantaloupe API (Advanced)
+```bash
+# Get DEX metadata directly
+curl -X POST "http://localhost:3300/api/cantaloupe/dex-raw?length=1000"
+
+# Authenticate and get cookies
+curl -X POST "http://localhost:3300/api/cantaloupe/auth"
 ```
 
 ## Expected Results
 
-After running both scripts:
-- **All 51 machines** have DEX data
-- **14+ machines** have CA17 cash denomination data
-- **10+ machines** have CA1 cash box data
-- **32+ machines** have CA2 cash sales data
-- `/devices` page shows real cash amounts instead of placeholders
+After running the modern process:
+- **All 49 machines** have latest DEX metadata (DEX IDs, timestamps)
+- **All 49 machines** have actual raw DEX content
+- **Raw DEX data includes**:
+  - DXS headers with device identifiers
+  - BA1 bill acceptor data
+  - CA1-CA15 cashless/card reader sections
+  - CB1 coin mechanism data
+  - DA2 device activity data
+  - MA5 machine status (temperature readings)
+  - PA1-PA2 product activity data
+- `/devices` page shows real vending machine telemetry
+
+## Raw DEX Content Format
+
+The raw DEX content follows the standard DEX format:
+```
+DXS*RST7654321*VA*V0/6*1
+ST*001*0001
+BA1*0350Y500014 *T7          *1200
+CA1*3040GD25630 *GRYPHON 3C3 *1070
+CA2*216520*633*0*0
+CA3*0*0*0*0*406760*39080*146680*221000
+CA4*0*0*181200*3830
+CA7*0*0*0*0
+CA8*0*1630
+CA10*0*0
+CA14*247000**0
+CA15*12890
+CB1***V8.22/210310
+DA2*533120*1328*620*1
+MA5*DESIRED TEMPERATURE*  400*C
+MA5*DETECTED TEMPERATURE*  600*C
+PA1*10*360
+PA2*53*19080*0*0*0*0*0*0
+```
+
+Each line contains different telemetry data separated by `*` characters.
 
 ## Troubleshooting
 
 ### Common Issues
 
-1. **500 Server Error on DEX list**
-   - The live `/dex/getData` endpoint sometimes returns 500 errors
-   - Solution: Use `dex-raw.js` which handles authentication and retry logic
+1. **419 Authentication Errors**
+   - CSRF token missing or expired
+   - Solution: The `/api/fetch-raw-dex-content` endpoint automatically extracts CSRF tokens
 
 2. **Authentication Failures**
-   - Cookies expire or become invalid
-   - Solution: Scripts automatically re-authenticate when needed
+   - Environment variables missing: `CANTALOUPE_USERNAME`, `CANTALOUPE_PASSWORD`
+   - Solution: Check .env.local file and credentials
 
-3. **Missing DEX IDs**
-   - Some machines may not have recent DEX records
-   - Check `live-case-serial-dex-mapping.json` for coverage
+3. **Empty Raw DEX Content**
+   - Some machines may not have recent DEX uploads
+   - Check `latestDexCreated` timestamp in comprehensive-raw-dex-data.json
 
-4. **Parse Errors**
-   - Some DEX records may not parse correctly
-   - Check `comprehensive-dex-data.json` errors array
+4. **Network Timeouts**
+   - Fetching all machines takes 15+ minutes
+   - Solution: API includes rate limiting (300ms delays) to avoid overwhelming Cantaloupe
 
 ### Debug Commands
 
 ```bash
-# Test dex-raw API directly
-curl "http://localhost:3300/api/cantaloupe/dex-raw?length=10"
+# Test authentication
+curl -X POST "http://localhost:3300/api/cantaloupe/auth"
 
-# Check current comprehensive data
-node -e "console.log(Object.keys(require('./public/data/comprehensive-dex-data.json').results).length)"
+# Test DEX metadata fetching
+curl -X POST "http://localhost:3300/api/cantaloupe/dex-raw?length=10"
 
-# Count machines with CA17 data
-node scripts/analyze-cash-data.js
+# Test individual machine DEX content
+curl -X POST "http://localhost:3300/api/cantaloupe/dex-data?machineId=CSA200202688"
+
+# Check comprehensive data structure
+cat public/data/comprehensive-raw-dex-data.json | jq '.totalMachines'
+
+# Count machines with actual content
+cat public/data/comprehensive-raw-dex-data.json | jq '[.machines[] | select(.rawDexContent != null)] | length'
 ```
 
 ## Historical Context
 
-- **Original approach**: Used mock API with limited data
-- **Current approach**: Calls live Cantaloupe API for real-time data
-- **Key insight**: The `/dex` endpoint returns 500 errors, but `/dex-raw.js` handles this properly
-- **Previous limitation**: Only 26/51 machines had DEX data
-- **Current status**: All 51/51 machines have complete DEX data
+- **Original approach (2024)**: Used scripts with parsed DEX data
+- **Modern approach (2025)**: API endpoints with raw DEX content
+- **Key improvements**:
+  - Direct API access instead of scripts
+  - CSRF token handling for authentication
+  - Raw DEX content (not just parsed metadata)
+  - Real-time machine telemetry data
+- **Previous limitation**: Only parsed DEX summaries
+- **Current status**: All 49/49 machines have complete raw DEX content
+
+## Authentication Requirements
+
+The system requires valid Cantaloupe dashboard credentials:
+
+```env
+# .env.local
+CANTALOUPE_USERNAME=your_username
+CANTALOUPE_PASSWORD=your_password
+```
+
+The authentication process:
+1. Logs into `https://dashboard.cantaloupe.online/login`
+2. Extracts session cookies
+3. Fetches CSRF token from dashboard page
+4. Uses cookies + CSRF for API requests
 
 ## Maintenance
 
-### Regular Tasks
-- Run daily to catch new DEX uploads
-- Monitor cash data coverage in `/devices` page
-- Check for new machines in inventory
+### Regular Tasks (Automated via API)
+```bash
+# Daily: Update DEX metadata and content
+curl -X POST "http://localhost:3300/api/fetch-raw-dex-content"
+```
+
+### Manual Monitoring
+- Check `/devices` page for real telemetry data
+- Monitor `comprehensive-raw-dex-data.json` file size and update timestamps
+- Verify all machines have `rawDexContent` populated
 
 ### When to Full Refresh
 - New machines added to inventory
-- Significant changes to DEX data structure
-- After long periods without updates (weekly)
+- After authentication credential changes
+- When comprehensive data file becomes corrupted
 
 ## Integration
 
-The fetched DEX data is consumed by:
-- **`components/Devices.js`**: Displays cash denominations and totals
-- **Dashboard analytics**: Machine performance tracking
-- **Cash reconciliation**: Daily cash amount verification
+The raw DEX data is consumed by:
+- **`components/Devices.js`**: Displays machine telemetry and status
+- **Dashboard analytics**: Real-time machine performance tracking
+- **Cash reconciliation**: Accurate cash/sales data from CA sections
+- **Temperature monitoring**: MA5 temperature readings
+- **Product tracking**: PA1/PA2 product sales data
+- **Maintenance alerts**: Error codes and device status
+
+## Security Notes
+
+- **Credentials**: Store in .env.local, never commit to repository
+- **Rate Limiting**: Built-in 300ms delays to respect Cantaloupe API
+- **CSRF Protection**: Automatically handled by fetch-raw-dex-content endpoint
+- **Session Management**: Cookies automatically refreshed when expired
