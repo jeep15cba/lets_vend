@@ -1,4 +1,5 @@
 // API endpoint to get parsed DEX data summary for device cards
+export const runtime = 'edge'
 import { getUserCompanyContext } from '../../../lib/supabase/server'
 
 export default async function handler(req, res) {

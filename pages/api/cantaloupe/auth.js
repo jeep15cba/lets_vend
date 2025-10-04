@@ -1,4 +1,5 @@
 
+export const runtime = 'edge'
 import { getUserDexCredentials } from '../../../lib/user-credentials'
 
 export default async function handler(req, res) {

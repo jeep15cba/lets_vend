@@ -1,5 +1,4 @@
-import fs from 'fs';
-import path from 'path';
+export const runtime = 'edge'
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
@@ -13,10 +12,16 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Case serial required' });
     }
 
-    // Read the file directly from filesystem
-    const filePath = path.join(process.cwd(), 'public/data/comprehensive-raw-dex-data.json');
-    const fileContent = fs.readFileSync(filePath, 'utf8');
-    const comprehensiveData = JSON.parse(fileContent);
+    // Fetch the static file via HTTP for Edge Runtime compatibility
+    const baseUrl = req.headers.origin || process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
+    const fileUrl = `${baseUrl}/data/comprehensive-raw-dex-data.json`
+    const response = await fetch(fileUrl)
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch comprehensive data')
+    }
+
+    const comprehensiveData = await response.json()
 
     const machine = comprehensiveData.data?.machines?.[caseSerial];
     if (!machine) {

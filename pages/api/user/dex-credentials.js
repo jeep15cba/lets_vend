@@ -1,4 +1,5 @@
 import { getUserCompanyContext } from '../../../lib/supabase/server'
+export const runtime = 'edge'
 import { encrypt, decrypt } from '../../../lib/encryption'
 
 export default async function handler(req, res) {
@@ -50,7 +51,7 @@ export default async function handler(req, res) {
           // Try to decrypt real credentials
           try {
             return res.status(200).json({
-              username: decrypt(data.username_encrypted),
+              username: await decrypt(data.username_encrypted),
               siteUrl: data.site_url || 'https://dashboard.cantaloupe.online',
               isConfigured: true,
               createdAt: data.created_at
@@ -92,8 +93,8 @@ export default async function handler(req, res) {
 
       try {
         // Encrypt the credentials for authenticated users
-        const encryptedUsername = encrypt(username)
-        const encryptedPassword = password ? encrypt(password) : null
+        const encryptedUsername = await encrypt(username)
+        const encryptedPassword = password ? await encrypt(password) : null
 
         // Try to save to Supabase user_credentials table
         // TEMPORARY: Use service role client to bypass RLS during session sync fix

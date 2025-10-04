@@ -1,4 +1,5 @@
 import { createServiceClient } from '../../../lib/supabase/server'
+export const runtime = 'edge'
 import { encrypt, decrypt } from '../../../lib/encryption'
 
 export default async function handler(req, res) {
@@ -40,8 +41,8 @@ export default async function handler(req, res) {
     for (const cred of credentials) {
       try {
         // Encrypt with new key
-        const newEncryptedUsername = encrypt(newUsername)
-        const newEncryptedPassword = encrypt(newPassword)
+        const newEncryptedUsername = await encrypt(newUsername)
+        const newEncryptedPassword = await encrypt(newPassword)
 
         // Update the record
         const { error: updateError } = await supabase

@@ -1,5 +1,4 @@
-import fs from 'fs'
-import path from 'path'
+export const runtime = 'edge'
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -178,34 +177,10 @@ export default async function handler(req, res) {
       drawNumber: dexData.draw
     })
 
-    // Step 4: Save complete response to file
+    // Note: File saving removed for Edge Runtime compatibility
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
     const filename = `dex-list-only-${timestamp}.json`
-    const filepath = path.join(process.cwd(), 'dex-data', filename)
-
-    // Ensure directory exists
-    const dir = path.dirname(filepath)
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true })
-    }
-
-    const fileData = {
-      timestamp: new Date().toISOString(),
-      summary: {
-        recordsTotal: dexData.recordsTotal,
-        recordsFiltered: dexData.recordsFiltered,
-        dataLength: dexData.data?.length,
-        drawNumber: dexData.draw
-      },
-      dateRange: {
-        start: formatWithTimezone(startDate),
-        end: formatWithTimezone(endDate)
-      },
-      fullResponse: dexData
-    }
-
-    fs.writeFileSync(filepath, JSON.stringify(fileData, null, 2))
-    console.log(`💾 Full DEX JSON list saved to: ${filename}`)
+    console.log(`📊 DEX data collected (would save to: ${filename})`)
 
     // Analyze the data structure
     const sampleRecord = dexData.data?.[0]

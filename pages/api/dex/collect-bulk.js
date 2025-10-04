@@ -1,4 +1,5 @@
 import { getUserCompanyContext } from '../../../lib/supabase/server'
+export const runtime = 'edge'
 import { parseDexContent, formatDexSummary } from '../../../lib/dex-parser'
 import { parseDexToKeyValue, formatKeyValuePairs } from '../../../lib/dex-key-value-parser'
 import { parseHybridDex, getDeviceCardData } from '../../../lib/dex-hybrid-parser'
@@ -419,44 +420,12 @@ export default async function handler(req, res) {
 
     console.log(`Successfully fetched ${processedRecords.length} raw DEX records, ${fetchErrors.length} errors`)
 
-    // Step 7: Save collected data to local file for debugging (optional)
-    // Primary storage is now the database
-    try {
-      const fs = require('fs')
-      const path = require('path')
-
-      const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
-      const filename = `dex-bulk-collection-${timestamp}.json`
-      const filepath = path.join(process.cwd(), 'dex-data', filename)
-
-      // Ensure directory exists
-      const dirPath = path.dirname(filepath)
-      if (!fs.existsSync(dirPath)) {
-        fs.mkdirSync(dirPath, { recursive: true })
-      }
-
-      const fileData = {
-        timestamp: new Date().toISOString(),
-        totalNewRecords: newDexRecords.length,
-        processedRecords: completeRecords.length,
-        fetchErrors: fetchErrors.length,
-        metadata: {
-          totalInMetadata,
-          existingDexIds: existingDexIds.size,
-          machineCount: Object.keys(machineMap).length
-        },
-        completeRecords, // Use complete records for file storage
-        fetchErrors,
-        newDexRecords: newDexRecords.map(r => ({ dexId: r.dexId, caseSerial: r.caseSerial, metadata: r.metadata }))
-      }
-
-      fs.writeFileSync(filepath, JSON.stringify(fileData, null, 2))
-      console.log(`📁 Saved DEX collection data to: ${filepath}`)
-
-    } catch (fileError) {
-      console.error('Error saving to file:', fileError)
-      // Continue with database save even if file save fails
-    }
+    // Note: File saving removed for Edge Runtime compatibility
+    // Data is saved to Supabase database instead
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
+    const filename = `dex-bulk-collection-${timestamp}.json`
+    console.log(`📁 DEX collection completed (would save to: ${filename})`)
+    console.log(`📊 Stats: ${completeRecords.length} processed, ${fetchErrors.length} errors`)
 
     // Step 7.5: Update machines with DEX metadata even if raw data fetch failed
     // This ensures machines get updated with latest DEX timestamps and info from metadata

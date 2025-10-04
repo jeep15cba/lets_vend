@@ -1,4 +1,5 @@
 import { getUserCompanyContext, createClient } from '../../../lib/supabase/server'
+export const runtime = 'edge'
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
