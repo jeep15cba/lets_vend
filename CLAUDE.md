@@ -60,14 +60,24 @@ ALL API routes MUST be compatible with Edge Runtime and Cloudflare Pages deploym
 
 ### Forbidden in Edge Runtime:
 
-1. **NO Node.js Modules** - These are NOT supported:
+1. **NO CommonJS require()** - Edge Runtime ONLY supports ES6 modules:
+   ```javascript
+   // ✅ CORRECT - ES6 import
+   import { createServiceClient } from '../../../lib/supabase/server'
+
+   // ❌ WRONG - CommonJS require (NOT SUPPORTED in Edge Runtime)
+   const { createServiceClient } = require('../../../lib/supabase/server')
+   ```
+   **IMPORTANT:** Never use `require()` anywhere in Edge Runtime API routes, even inside functions.
+
+2. **NO Node.js Modules** - These are NOT supported:
    - ❌ `fs` (file system)
    - ❌ `path`
    - ❌ `crypto` (Node.js version)
    - ❌ `process.cwd()`
    - ❌ Any other Node.js built-in modules
 
-2. **Use Web APIs Instead**:
+3. **Use Web APIs Instead**:
    ```javascript
    // ✅ CORRECT - Web Crypto API (async)
    import { encrypt, decrypt } from '../../../lib/encryption'
@@ -78,7 +88,7 @@ ALL API routes MUST be compatible with Edge Runtime and Cloudflare Pages deploym
    const crypto = require('crypto')
    ```
 
-3. **File Access** - Use HTTP fetch for static files:
+4. **File Access** - Use HTTP fetch for static files:
    ```javascript
    // ✅ CORRECT - HTTP fetch
    const baseUrl = req.headers.get('origin') || process.env.NEXT_PUBLIC_SITE_URL
@@ -151,6 +161,7 @@ if (req.method !== 'POST') {
 
 - [ ] All API routes have `export const runtime = 'edge'`
 - [ ] All routes use `new Response()` format
+- [ ] **NO `require()` statements anywhere** - Use `import` only (ES6 modules)
 - [ ] No Node.js modules (fs, path, crypto, etc.)
 - [ ] Request body uses `await req.json()`
 - [ ] Query params use `URL.searchParams`
@@ -158,3 +169,12 @@ if (req.method !== 'POST') {
 - [ ] Handler has single parameter `(req)` not `(req, res)`
 - [ ] Run `npm run build` successfully before deploying
 - [ ] Test all routes locally with Edge Runtime enabled
+
+### Quick Check Commands:
+
+```bash
+# Check for any require() statements in API routes
+grep -r "require(" pages/api --include="*.js"
+
+# Should return nothing if all routes are Edge Runtime compatible
+```

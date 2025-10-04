@@ -1,5 +1,6 @@
 // API endpoint to mass update machine types and models from mapping file
 import { createServiceClient } from '../../../lib/supabase/server'
+import deviceMachineTypes from '../../../data/machine-types-mapping.js'
 
 export const runtime = 'edge'
 
@@ -12,8 +13,7 @@ export default async function handler(req) {
   }
 
   try {
-    // Import the machine types mapping
-    const deviceMachineTypes = require('../../../data/machine-types-mapping')
+    // Import the machine types mapping (now using ES6 import at top)
 
     const { supabase } = createServiceClient()
 
