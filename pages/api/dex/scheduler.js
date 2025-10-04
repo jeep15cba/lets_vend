@@ -1,4 +1,4 @@
-import { getUserCompanyContext } from '../../../lib/supabase/server'
+import { getUserCompanyContext, createServiceClient } from '../../../lib/supabase/server'
 export const runtime = 'edge'
 
 export default async function handler(req) {
@@ -51,7 +51,6 @@ export default async function handler(req) {
     }
 
     // Get user context from Supabase auth
-    const { getUserCompanyContext } = require('../../../lib/supabase/server')
     const { user, companyId, error: authError } = await getUserCompanyContext(req)
 
     if (authError || !user) {
@@ -65,7 +64,6 @@ export default async function handler(req) {
     }
 
     // Get all active machines from Supabase for this company
-    const { createServiceClient } = require('../../../lib/supabase/server')
     const { supabase } = createServiceClient()
 
     const { data: machines, error } = await supabase

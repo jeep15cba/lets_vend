@@ -1,8 +1,9 @@
-import { getUserCompanyContext } from '../../../lib/supabase/server'
+import { getUserCompanyContext, createServiceClient } from '../../../lib/supabase/server'
 export const runtime = 'edge'
 import { parseDexContent, formatDexSummary } from '../../../lib/dex-parser'
 import { parseDexToKeyValue, formatKeyValuePairs } from '../../../lib/dex-key-value-parser'
 import { parseHybridDex, getDeviceCardData } from '../../../lib/dex-hybrid-parser'
+import { getUserDexCredentials } from '../../../lib/user-credentials'
 
 export default async function handler(req) {
   if (req.method !== 'POST') {
@@ -39,7 +40,6 @@ export default async function handler(req) {
     console.log('Authentication successful!')
 
     // Get siteUrl from user credentials
-    const { getUserDexCredentials } = require('../../../lib/user-credentials')
     const credentials = await getUserDexCredentials(req)
     const siteUrl = credentials.siteUrl || 'https://dashboard.cantaloupe.online'
 
@@ -193,7 +193,6 @@ export default async function handler(req) {
     }
 
     // Step 4: Set up database connection and get existing DEX IDs
-    const { createServiceClient } = require('../../../lib/supabase/server')
     const { supabase } = createServiceClient()
 
     // Get all machines for this company

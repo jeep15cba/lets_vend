@@ -1,6 +1,6 @@
 // API endpoint to get parsed DEX data summary for device cards
 export const runtime = 'edge'
-import { getUserCompanyContext } from '../../../lib/supabase/server'
+import { getUserCompanyContext, createServiceClient } from '../../../lib/supabase/server'
 
 export default async function handler(req) {
   if (req.method !== 'GET') {
@@ -23,7 +23,6 @@ export default async function handler(req) {
     }
 
     // Get database connection
-    const { createServiceClient } = require('../../../lib/supabase/server')
     const { supabase } = createServiceClient()
 
     // Get the machine for this company

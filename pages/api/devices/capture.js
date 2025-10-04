@@ -1,5 +1,6 @@
-import { getUserCompanyContext } from '../../../lib/supabase/server'
+import { getUserCompanyContext, createServiceClient } from '../../../lib/supabase/server'
 export const runtime = 'edge'
+import { getUserDexCredentials } from '../../../lib/user-credentials'
 
 export default async function handler(req) {
   if (req.method !== 'POST') {
@@ -42,7 +43,6 @@ export default async function handler(req) {
     console.log('Cookies length:', allCookies ? allCookies.length : 'null')
 
     // Get siteUrl from user credentials
-    const { getUserDexCredentials } = require('../../../lib/user-credentials')
     const credentials = await getUserDexCredentials(req)
     const siteUrl = credentials.siteUrl || 'https://dashboard.cantaloupe.online'
 
@@ -135,7 +135,6 @@ export default async function handler(req) {
 
     // Step 3: Process and save devices to Supabase
     // Create Supabase client early for location processing
-    const { createServiceClient } = require('../../../lib/supabase/server')
     const { supabase } = createServiceClient()
 
     const processedDevices = []

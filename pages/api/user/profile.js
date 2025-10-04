@@ -1,4 +1,4 @@
-import { getUserCompanyContext } from '../../../lib/supabase/server'
+import { getUserCompanyContext, createClient } from '../../../lib/supabase/server'
 export const runtime = 'edge'
 
 export default async function handler(req) {
@@ -22,7 +22,6 @@ export default async function handler(req) {
     if (companyId) {
       try {
         // Use authenticated client with proper RLS
-        const { createClient } = require('../../../lib/supabase/server')
         const { supabase } = createClient(req)
 
         console.log('🔧 Profile API: Querying company with ID:', companyId)

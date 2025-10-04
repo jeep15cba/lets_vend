@@ -1,4 +1,4 @@
-import { getUserCompanyContext } from '../../../lib/supabase/server'
+import { getUserCompanyContext, createServiceClient } from '../../../lib/supabase/server'
 export const runtime = 'edge'
 import { getUserDexCredentials } from '../../../lib/user-credentials'
 
@@ -214,7 +214,6 @@ export default async function handler(req) {
     }
 
     // Step 3: Process and save DEX data to Supabase
-    const { createServiceClient } = require('../../../lib/supabase/server')
     const { supabase } = createServiceClient()
 
     // First, get the actual machine record to find the case_serial

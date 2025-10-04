@@ -1,4 +1,4 @@
-import { getUserCompanyContext } from '../../../lib/supabase/server'
+import { getUserCompanyContext, createServiceClient } from '../../../lib/supabase/server'
 export const runtime = 'edge'
 import { encrypt, decrypt } from '../../../lib/encryption'
 
@@ -20,7 +20,6 @@ export default async function handler(req) {
       try {
         // Try to fetch from Supabase user_credentials table
         // Use service role client to bypass RLS during auth transition
-        const { createServiceClient } = require('../../../lib/supabase/server')
         const { supabase } = createServiceClient()
 
         const { data, error } = await supabase
@@ -98,7 +97,6 @@ export default async function handler(req) {
 
         // Try to save to Supabase user_credentials table
         // TEMPORARY: Use service role client to bypass RLS during session sync fix
-        const { createServiceClient } = require('../../../lib/supabase/server')
         const { supabase } = createServiceClient()
 
         const credentialsData = {
@@ -140,7 +138,6 @@ export default async function handler(req) {
         if (credentialsValid) {
           console.log('🔧 Updating user metadata with hasValidCredentials: true')
           try {
-            const { createServiceClient } = require('../../../lib/supabase/server')
             const { supabase: adminSupabase } = createServiceClient()
 
             const { error: updateError } = await adminSupabase.auth.admin.updateUserById(user.id, {

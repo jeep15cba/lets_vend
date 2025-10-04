@@ -1,4 +1,4 @@
-import { getUserCompanyContext } from '../../../lib/supabase/server'
+import { getUserCompanyContext, createServiceClient } from '../../../lib/supabase/server'
 export const runtime = 'edge'
 
 export default async function handler(req) {
@@ -17,7 +17,6 @@ export default async function handler(req) {
       // Get saved devices for the user
       try {
         // Fetch from Supabase machines table
-        const { createServiceClient } = require('../../../lib/supabase/server')
         const { supabase } = createServiceClient()
 
         const { data: machines, error } = await supabase
