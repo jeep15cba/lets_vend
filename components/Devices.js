@@ -1065,14 +1065,14 @@ export default function Devices() {
                                 {expandedErrors === device.id ? '🔽' : '▶️'} {device.latest_errors.length} Error{device.latest_errors.length > 1 ? 's' : ''}
                               </button>
                               {expandedErrors === device.id && (
-                                <div className="mt-2 p-2 bg-gray-50 rounded border border-gray-300 max-h-48 overflow-y-auto">
+                                <div className="mt-2 py-2 bg-gray-50 rounded border border-gray-300 max-h-48 overflow-y-auto">
                                   {device.latest_errors
                                     .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
                                     .map((error, idx) => {
                                       const isUA = error.code.startsWith('UA')
                                       return (
-                                        <div key={idx} className={`py-2 px-3 mb-1 rounded border ${isUA ? 'bg-green-50 border-green-300' : (error.actioned ? 'bg-green-50 border-green-300' : 'bg-red-50 border-red-300')}`}>
-                                          <div className="flex items-start justify-between gap-3">
+                                        <div key={idx} className={`py-2 mb-1 rounded border ${isUA ? 'bg-green-50 border-green-300' : (error.actioned ? 'bg-green-50 border-green-300' : 'bg-red-50 border-red-300')}`}>
+                                          <div className="flex items-start justify-between gap-3 px-2">
                                             <div className="flex-1">
                                               <div className="flex items-center gap-2">
                                                 <span className={`px-1.5 py-0.5 rounded text-xs font-bold ${error.type === 'MA5' ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700'}`}>
@@ -1163,14 +1163,14 @@ export default function Devices() {
                               {expandedErrors === device.id ? '🔽' : '▶️'} {device.latest_errors.length} Error{device.latest_errors.length > 1 ? 's' : ''}
                             </button>
                             {expandedErrors === device.id && (
-                              <div className="mt-2 p-2 bg-gray-50 rounded border border-gray-300 max-h-48 overflow-y-auto">
+                              <div className="mt-2 py-2 bg-gray-50 rounded border border-gray-300 max-h-48 overflow-y-auto">
                                 {device.latest_errors
                                   .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
                                   .map((error, idx) => {
                                     const isUA = error.code.startsWith('UA')
                                     return (
-                                      <div key={`mobile-error-${idx}`} className={`py-2 px-3 mb-1 rounded border ${isUA ? 'bg-green-50 border-green-300' : (error.actioned ? 'bg-green-50 border-green-300' : 'bg-red-50 border-red-300')}`}>
-                                        <div className="flex items-start justify-between gap-3">
+                                      <div key={`mobile-error-${idx}`} className={`py-2 mb-1 rounded border ${isUA ? 'bg-green-50 border-green-300' : (error.actioned ? 'bg-green-50 border-green-300' : 'bg-red-50 border-red-300')}`}>
+                                        <div className="flex items-start justify-between gap-3 px-2">
                                           <div className="flex-1">
                                             <div className="flex items-center gap-2">
                                               <span className={`px-1.5 py-0.5 rounded text-xs font-bold ${error.type === 'MA5' ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700'}`}>
@@ -1414,7 +1414,8 @@ export default function Devices() {
 
           return (
             <div className="mb-6 bg-red-600 rounded-lg shadow-lg border-2 border-red-700 overflow-hidden">
-              <div className="p-4 sm:p-6">
+              {/* Header Section with Icon */}
+              <div className="p-4 sm:p-6 pb-2">
                 <div className="flex items-start gap-2 sm:gap-4">
                   <div className="flex-shrink-0">
                     <div className="w-10 h-10 sm:w-12 sm:h-12 bg-white rounded-full flex items-center justify-center">
@@ -1425,14 +1426,18 @@ export default function Devices() {
                     <h3 className="text-xl font-bold text-white mb-2">
                       {machinesWithErrors.length} Machine{machinesWithErrors.length > 1 ? 's' : ''} Require{machinesWithErrors.length === 1 ? 's' : ''} Attention
                     </h3>
-                    <p className="text-red-100 mb-4">
+                    <p className="text-red-100">
                       The following machines have unactioned errors that need to be reviewed
                     </p>
-                    <div className="space-y-2">
-                      {machinesWithErrors.slice(0, 5).map(device => {
-                        const errorCount = device.latest_errors.filter(e => !e.actioned && !e.code.startsWith('UA')).length;
-                        return (
-                          <div key={device.id} className="bg-red-700 bg-opacity-50 rounded-lg p-3">
+                  </div>
+                </div>
+              </div>
+              {/* Error List Section */}
+              <div className="px-2 pb-4 space-y-2">
+                {machinesWithErrors.slice(0, 5).map(device => {
+                  const errorCount = device.latest_errors.filter(e => !e.actioned && !e.code.startsWith('UA')).length;
+                  return (
+                    <div key={device.id} className="bg-red-700 bg-opacity-50 rounded-lg p-3">
                             {/* Mobile: 2x2 Grid Layout */}
                             <div className="grid grid-cols-2 gap-2">
                               {/* Row 1, Col 1: Case Serial */}
@@ -1466,25 +1471,22 @@ export default function Devices() {
                             </div>
                           </div>
                         );
-                      })}
-                      {machinesWithErrors.length > 5 && (
-                        <div className="text-center pt-2">
-                          <button
-                            onClick={() => {
-                              setFilters({...filters, errors: 'has_unactioned'});
-                              setTimeout(() => {
-                                document.querySelector('[data-devices-list]')?.scrollIntoView({ behavior: 'smooth' });
-                              }, 100);
-                            }}
-                            className="text-white hover:text-red-100 font-medium text-sm underline"
-                          >
-                            + {machinesWithErrors.length - 5} more machines with errors
-                          </button>
-                        </div>
-                      )}
-                    </div>
+                })}
+                {machinesWithErrors.length > 5 && (
+                  <div className="text-center pt-2">
+                    <button
+                      onClick={() => {
+                        setFilters({...filters, errors: 'has_unactioned'});
+                        setTimeout(() => {
+                          document.querySelector('[data-devices-list]')?.scrollIntoView({ behavior: 'smooth' });
+                        }, 100);
+                      }}
+                      className="text-white hover:text-red-100 font-medium text-sm underline"
+                    >
+                      + {machinesWithErrors.length - 5} more machines with errors
+                    </button>
                   </div>
-                </div>
+                )}
               </div>
             </div>
           );
