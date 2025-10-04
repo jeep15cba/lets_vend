@@ -1308,13 +1308,18 @@ export default function Devices() {
                       // Get current time in AEST
                       const aestTime = new Date(currentTime.toLocaleString('en-US', { timeZone: 'Australia/Sydney' }));
                       const minutes = aestTime.getMinutes();
+                      // Calculate next 20-minute interval (0, 20, 40)
                       const nextInterval = Math.ceil(minutes / 20) * 20;
                       const nextTime = new Date(aestTime);
-                      nextTime.setMinutes(nextInterval, 0, 0);
+
                       if (nextInterval >= 60) {
+                        // Cross into next hour
                         nextTime.setHours(nextTime.getHours() + 1);
-                        nextTime.setMinutes(nextInterval % 60, 0, 0);
+                        nextTime.setMinutes(0, 0, 0);
+                      } else {
+                        nextTime.setMinutes(nextInterval, 0, 0);
                       }
+
                       return nextTime.toLocaleTimeString('en-AU', { hour: 'numeric', minute: '2-digit', hour12: true });
                     })()}
                   </div>
