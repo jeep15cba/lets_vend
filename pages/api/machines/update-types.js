@@ -77,7 +77,7 @@ export default async function handler(req) {
       message: 'Machine types and models updated',
       totalMachines: machines.length,
       updated: updates.length,
-      skipped: skipped.length,
+      skippedCount: skipped.length,
       updates,
       skipped
     }), {
