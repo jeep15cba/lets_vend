@@ -3,6 +3,7 @@
 
 import fs from 'fs';
 import path from 'path';
+import { getUserCompanyContext } from '../../../lib/supabase/server';
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
@@ -10,6 +11,20 @@ export default async function handler(req, res) {
   }
 
   try {
+    // Get user context from middleware headers (if authenticated)
+    // For now, we'll allow public access but filter based on company if authenticated
+    const userId = req.headers['x-user-id'];
+    const userEmail = req.headers['x-user-email'];
+    const companyId = req.headers['x-company-id'];
+    const userRole = req.headers['x-user-role'];
+
+    console.log('API Auth Context:', { userId, userEmail, companyId, userRole });
+
+    // DEV MODE: Skip auth if Supabase not configured
+    const isDevMode = !process.env.NEXT_PUBLIC_SUPABASE_URL;
+    if (isDevMode) {
+      console.log('🔧 DEV MODE: Public access to machine summary');
+    }
     // Read the file directly from filesystem
     const filePath = path.join(process.cwd(), 'public/data/comprehensive-raw-dex-data.json');
     const fileContent = fs.readFileSync(filePath, 'utf8');

@@ -1,5 +1,6 @@
 import Devices from '../components/Devices';
 import Login from '../components/Login';
+import Navigation from '../components/Navigation';
 import Head from 'next/head';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -33,7 +34,14 @@ export default function DevicesPage() {
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <link rel="icon" href="/favicon.ico" />
       </Head>
-      {user ? <Devices /> : <Login />}
+      {user ? (
+        <>
+          <Navigation />
+          <Devices />
+        </>
+      ) : (
+        <Login />
+      )}
     </>
   );
 }

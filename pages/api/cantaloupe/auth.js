@@ -1,45 +1,36 @@
 
-export const runtime = 'edge';
+import { getUserDexCredentials } from '../../../lib/user-credentials'
 
-export default async function handler(request) {
-  if (request.method !== 'POST') {
-    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
-      status: 405,
-      headers: { 'Content-Type': 'application/json' }
-    });
+export default async function handler(req, res) {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const username = process.env.CANTALOUPE_USERNAME;
-  const password = process.env.CANTALOUPE_PASSWORD;
+  // Get user-specific DEX credentials
+  const credentials = await getUserDexCredentials(req);
 
-  console.log('Environment check:', {
-    hasUsername: !!username,
-    hasPassword: !!password,
-    usernameLength: username ? username.length : 0,
-    environment: process.env.NODE_ENV,
-    hasSiteUrl: !!process.env.NEXT_PUBLIC_SITE_URL,
-    origin: request.headers.get('origin')
+  console.log('Credentials check:', {
+    isConfigured: credentials.isConfigured,
+    hasUsername: !!credentials.username,
+    hasPassword: !!credentials.password,
+    siteUrl: credentials.siteUrl,
+    error: credentials.error
   });
 
-  if (!username || !password) {
-    return new Response(JSON.stringify({
-      error: 'Missing credentials in environment variables',
-      debug: {
-        hasUsername: !!username,
-        hasPassword: !!password,
-        environment: process.env.NODE_ENV
-      }
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
+  if (!credentials.isConfigured || !credentials.username || !credentials.password) {
+    return res.status(400).json({
+      error: credentials.error || 'DEX credentials not configured',
+      needsConfiguration: true
     });
   }
+
+  const { username, password, siteUrl } = credentials;
 
   try {
     console.log('Starting authentication process...');
 
     // Get initial cookies from login page
-    const loginPageResponse = await fetch('https://dashboard.cantaloupe.online/login', {
+    const loginPageResponse = await fetch(`${siteUrl}/login`, {
       method: 'GET',
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
@@ -58,7 +49,7 @@ export default async function handler(request) {
     formData.append('email', username);
     formData.append('password', password);
 
-    const loginResponse = await fetch('https://dashboard.cantaloupe.online/login', {
+    const loginResponse = await fetch(`${siteUrl}/login`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
@@ -66,8 +57,8 @@ export default async function handler(request) {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
         'Accept-Language': 'en-US,en;q=0.5',
-        'Referer': 'https://dashboard.cantaloupe.online/login',
-        'Origin': 'https://dashboard.cantaloupe.online',
+        'Referer': `${siteUrl}/login`,
+        'Origin': siteUrl,
         'Connection': 'keep-alive',
         'Upgrade-Insecure-Requests': '1'
       },
@@ -80,8 +71,12 @@ export default async function handler(request) {
     console.log('Initial cookies from login page:', cookies?.substring(0, 200) + '...');
     console.log('Auth cookies from login response:', authCookies?.substring(0, 200) + '...');
 
-    if (loginResponse.status === 302) {
-      console.log('Authentication successful');
+    // Check redirect location to verify successful login
+    const redirectLocation = loginResponse.headers.get('location')
+    console.log('Redirect location:', redirectLocation)
+
+    if (loginResponse.status === 302 && redirectLocation && !redirectLocation.includes('/login')) {
+      console.log('Authentication successful - redirected to:', redirectLocation);
 
       // Combine initial cookies with auth cookies
       let allCookies = '';
@@ -116,28 +111,28 @@ export default async function handler(request) {
 
       console.log('Final combined cookies:', allCookies?.substring(0, 200) + '...');
 
-      return new Response(JSON.stringify({
+      return res.status(200).json({
         success: true,
         cookies: allCookies,
         message: 'Authentication successful'
-      }), {
-        headers: { 'Content-Type': 'application/json' }
       });
     } else {
       console.error('Authentication failed, status:', loginResponse.status);
+      console.error('Redirect location indicates failure:', redirectLocation);
       const responseText = await loginResponse.text();
       console.error('Response body:', responseText.substring(0, 200));
-      return new Response(JSON.stringify({ error: 'Authentication failed' }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' }
+      return res.status(401).json({
+        error: 'Authentication failed',
+        details: {
+          status: loginResponse.status,
+          redirectLocation,
+          bodyPreview: responseText.substring(0, 200)
+        }
       });
     }
 
   } catch (error) {
     console.error('Auth error:', error);
-    return new Response(JSON.stringify({ error: 'Authentication error: ' + error.message }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return res.status(500).json({ error: 'Authentication error: ' + error.message });
   }
 }

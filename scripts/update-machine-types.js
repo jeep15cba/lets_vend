@@ -1,114 +1,158 @@
-const fs = require('fs');
-const path = require('path');
+// One-time script to mass update machine types and models in Supabase
+const { createClient } = require('@supabase/supabase-js')
+const fs = require('fs')
+const path = require('path')
 
-// Load the machine types mapping
-const deviceMachineTypes = {
-  // Beverage machines (Type contains 'Bev')
-  'CSA200202657': { type: 'bev', model: 'Royal Merlin IV - 542-8', location: 'Bell & Moir Toyota' },
-  'CSA200202656': { type: 'bev', model: 'Royal Merlin IV - 542-8', location: 'Followmont Transport' },
-  'CSA200205616': { type: 'bev', model: 'Royal Merlin IV - 768-9', location: 'TAFE' },
-  'CSA200202661': { type: 'bev', model: 'Royal Merlin IV - 542-8', location: 'Spinifex Junior College' },
-  'CSA200202677': { type: 'bev', model: 'Royal Merlin IV - 768-9', location: 'MIM Lease' },
-  'CSA200202678': { type: 'bev', model: 'Royal Merlin IV - 542-8', location: 'MIM Lease' },
-  'CSA200202675': { type: 'bev', model: 'Royal Merlin IV - 768-9', location: 'MIM Lease' },
-  'CSA200202662': { type: 'bev', model: 'Royal Merlin IV - 542-9', location: 'GFM Lease' },
-  'CSA200202688': { type: 'bev', model: 'Royal Merlin IV - 542-8', location: 'MIM Lease' },
-  'CSA200202654': { type: 'bev', model: 'Royal Merlin IV - 542-9', location: 'MIM Lease' },
-  'CSA200202691': { type: 'bev', model: 'Royal Merlin IV - 542-8', location: 'Cava Workshop' },
-  'CSA200202692': { type: 'bev', model: 'Royal Merlin IV - 768-9', location: 'GFM Lease' },
-  'CSA200202669': { type: 'bev', model: 'Royal Merlin IV - 768-9', location: 'MIM Lease' },
-  'CSA200202655': { type: 'bev', model: 'Royal Merlin IV - 542-8', location: 'Spinifex Senior College' },
-  '552234133189': { type: 'bev', model: 'Royal Merlin IV - 768-10', location: 'North West Hospital and Health Service' },
-  'CSA200202667': { type: 'bev', model: 'Royal Merlin IV - 542-8', location: 'Batch Plant' },
-  'CSA200202653': { type: 'bev', model: 'Royal Merlin IV - 542-8', location: 'TAFE' },
-  'CSA200202668': { type: 'bev', model: 'Royal Merlin IV - 768-10', location: 'GFM Lease' },
-  'CSA200204452': { type: 'bev', model: 'Royal Merlin IV - 768-10', location: 'Mount Isa Airport' },
+// Load environment variables from .env.local
+const envPath = path.join(__dirname, '..', '.env.local')
+const envContent = fs.readFileSync(envPath, 'utf8')
+envContent.split('\n').forEach(line => {
+  const match = line.match(/^([^=]+)=(.*)$/)
+  if (match) {
+    process.env[match[1]] = match[2]
+  }
+})
 
-  // Food machines (Type does not contain 'Bev')
-  'CSA200202674': { type: 'food', model: 'VCM-5000', location: 'Skills Center' },
-  'CSA200202670': { type: 'food', model: 'VCM-5000', location: 'GFM Lease' },
-  'CSA200202685': { type: 'food', model: 'BV3', location: 'Mount Isa City Council Staff Room' },
-  'CSA200202680': { type: 'food', model: 'BV5', location: 'MIM Lease' },
-  '552234133306': { type: 'food', model: 'BV3', location: 'Isawash Laundromat' },
-  'CSA200202681': { type: 'food', model: 'BV5', location: 'Hastings Deering' },
-  'CSA200202659': { type: 'food', model: 'VCM-5000 - SIII', location: 'Mount Isa Airport' },
-  'CSA200202666': { type: 'food', model: 'VCM-3000', location: 'Team Global Express' },
-  '552234133200': { type: 'food', model: 'VCM-4000', location: 'JDR Mining and Civil' },
-  'CSA200201037': { type: 'food', model: 'VCM-4000 - SIII', location: 'Atom Safety' },
-  '552234133195': { type: 'food', model: 'VCM-4000 - SIII', location: 'Mount Isa Courthouse' },
-  'CSA200202660': { type: 'food', model: 'VCM-6000', location: 'GFM Lease' },
-  'CSA200202665': { type: 'food', model: 'VCM-4000', location: 'Malouf Ford' },
-  'CSA200202690': { type: 'food', model: 'VCM-3000', location: 'New Nation Fitness' },
-  'CSA200204043': { type: 'food', model: 'VCM-4000 - SIII', location: 'Sandvik Mining and Rock Technology' },
-  'CSA200202686': { type: 'food', model: 'VCM-6000', location: 'MIM Lease' },
-  'CSA200205378': { type: 'food', model: 'VCM-4000', location: 'JJ\'s Waste & Recycling' },
-  '552234133196': { type: 'food', model: 'VCM-4000 - SIII', location: 'Library' },
-  'CSA200205375': { type: 'food', model: 'VCM-4000', location: 'Isadraulics' },
-  'CSA200205377': { type: 'food', model: 'VCM-4000', location: 'Hastings Deering' },
-  '552234133194': { type: 'food', model: 'VCM-4000', location: 'Queensland Rail' },
-  'CSA200202672': { type: 'food', model: 'VCM-5000 - SIII', location: 'ibis Styles Mount Isa' },
-  'CSA200202689': { type: 'food', model: 'VCM-6000', location: 'MIM Lease' },
-  '552234133191': { type: 'food', model: 'VCM-4000 SB', location: 'Jimaylya Topsy Harry Center' },
-  '552234133192': { type: 'food', model: 'VCM-4000 SB', location: 'Arthur Peterson Diversionary Centre' },
-  'CSA200205534': { type: 'food', model: 'VCM-4000 SB', location: 'Kabalulumana Hostel' },
-  'CSA200202673': { type: 'food', model: 'VCM-4000 SB', location: 'MIM Lease' },
-  'CSA200202671': { type: 'food', model: 'VCM-4000 SB', location: 'Brodie Germain Fitness' },
-  'CSA200202683': { type: 'food', model: 'VCM-4000 SB', location: 'Orica Mount Isa' },
-  'CSA200202664': { type: 'food', model: 'VCM-5000 SII', location: 'Mount Isa Airport' },
-  'CSA200205376': { type: 'food', model: 'VCM-5000 SB', location: 'IDC Warehouse' },
-  'CSA200202679': { type: 'food', model: 'VCM-6000', location: 'TAFE' }
-};
+const deviceMachineTypes = require('../data/machine-types-mapping')
+const comprehensiveDexData = require('../data/comprehensive-dex-data.json')
 
-function updateMachineTypes() {
-  try {
-    // Read the current mapping file
-    const mappingPath = path.join(__dirname, '..', 'data', 'case-serial-dex-mapping.json');
-    const mappingData = JSON.parse(fs.readFileSync(mappingPath, 'utf8'));
+async function updateMachineTypes() {
+  // Create Supabase client with service role key (bypasses RLS)
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_SERVICE
 
-    let updatedCount = 0;
-    let totalEntries = 0;
+  if (!supabaseUrl || !supabaseKey) {
+    console.error('Missing Supabase credentials in .env.local')
+    console.error('Required: NEXT_PUBLIC_SUPABASE_URL and (SUPABASE_SERVICE_ROLE_KEY or NEXT_PUBLIC_SUPABASE_SERVICE)')
+    process.exit(1)
+  }
 
-    // Update each case serial with machine type information
-    for (const [caseSerial, dexRecords] of Object.entries(mappingData.mappings)) {
-      totalEntries++;
+  console.log('Using Supabase URL:', supabaseUrl)
+  console.log('Using service role key:', supabaseKey.substring(0, 20) + '...')
 
-      const machineInfo = deviceMachineTypes[caseSerial];
+  const supabase = createClient(supabaseUrl, supabaseKey)
 
-      if (machineInfo) {
-        // Update each DEX record in the array with machine type info
-        for (const record of dexRecords) {
-          if (!record.machineType) {
-            record.machineType = machineInfo.type;
-            record.machineModel = machineInfo.model;
-            record.machineLocation = machineInfo.location;
-            updatedCount++;
-          }
+  console.log('Fetching machines from Supabase...')
+
+  // Get all machines from the database
+  const { data: machines, error: fetchError } = await supabase
+    .from('machines')
+    .select('id, case_serial, machine_type, machine_model, cash_enabled, status, company_id')
+
+  if (fetchError) {
+    console.error('Error fetching machines:', fetchError)
+    process.exit(1)
+  }
+
+  console.log(`Found ${machines.length} machines in database`)
+
+  const updates = []
+  const skipped = []
+
+  // Process each machine
+  for (const machine of machines) {
+    const mapping = deviceMachineTypes[machine.case_serial]
+    const dexData = comprehensiveDexData.results[machine.case_serial]
+
+    if (mapping || dexData) {
+      const updateData = {}
+      let needsUpdate = false
+
+      // Update machine type and model from mapping
+      if (mapping) {
+        const machineType = mapping.type === 'bev' ? 'beverage' : mapping.type
+
+        if (machine.machine_type !== machineType) {
+          updateData.machine_type = machineType
+          needsUpdate = true
+        }
+
+        if (machine.machine_model !== mapping.model) {
+          updateData.machine_model = mapping.model
+          needsUpdate = true
         }
       }
+
+      // Update cash_enabled and status from comprehensive DEX data
+      if (dexData && dexData.machineDetails) {
+        const cashEnabled = dexData.machineDetails.cashEnabled
+        const status = dexData.machineDetails.status
+
+        if (cashEnabled !== undefined && machine.cash_enabled !== cashEnabled) {
+          updateData.cash_enabled = cashEnabled
+          needsUpdate = true
+        }
+
+        if (status && machine.status !== status) {
+          updateData.status = status
+          needsUpdate = true
+        }
+      }
+
+      // Check if update is needed
+      if (needsUpdate) {
+        console.log(`Updating ${machine.case_serial}:`, updateData)
+
+        updates.push({
+          case_serial: machine.case_serial,
+          old: {
+            type: machine.machine_type,
+            model: machine.machine_model,
+            cash_enabled: machine.cash_enabled,
+            status: machine.status
+          },
+          new: {
+            type: updateData.machine_type || machine.machine_type,
+            model: updateData.machine_model || machine.machine_model,
+            cash_enabled: updateData.cash_enabled !== undefined ? updateData.cash_enabled : machine.cash_enabled,
+            status: updateData.status || machine.status
+          }
+        })
+
+        // Update the machine in Supabase
+        const { error: updateError } = await supabase
+          .from('machines')
+          .update(updateData)
+          .eq('id', machine.id)
+
+        if (updateError) {
+          console.error(`Error updating machine ${machine.case_serial}:`, updateError)
+        }
+      } else {
+        console.log(`Skipping ${machine.case_serial}: already up to date`)
+      }
+    } else {
+      skipped.push({
+        case_serial: machine.case_serial,
+        reason: 'No mapping or DEX data found'
+      })
+      console.log(`Skipping ${machine.case_serial}: no mapping or DEX data found`)
     }
+  }
 
-    // Update the file metadata
-    mappingData.lastMachineTypeUpdate = new Date().toISOString();
-    mappingData.machineTypeNote = "Machine types added based on device list: 'bev' for beverage machines, 'food' for snack/food machines";
+  console.log('\n=== Update Summary ===')
+  console.log(`Total machines: ${machines.length}`)
+  console.log(`Updated: ${updates.length}`)
+  console.log(`Skipped: ${skipped.length}`)
 
-    // Write the updated file back
-    fs.writeFileSync(mappingPath, JSON.stringify(mappingData, null, 2));
+  if (updates.length > 0) {
+    console.log('\n=== Updated Machines ===')
+    updates.forEach(u => {
+      const changes = []
+      if (u.old.type !== u.new.type) changes.push(`type: ${u.old.type || 'null'} → ${u.new.type}`)
+      if (u.old.model !== u.new.model) changes.push(`model: ${u.old.model || 'null'} → ${u.new.model}`)
+      if (u.old.cash_enabled !== u.new.cash_enabled) changes.push(`cash_enabled: ${u.old.cash_enabled} → ${u.new.cash_enabled}`)
+      if (u.old.status !== u.new.status) changes.push(`status: ${u.old.status} → ${u.new.status}`)
+      console.log(`${u.case_serial}: ${changes.join(', ')}`)
+    })
+  }
 
-    console.log(`✅ Machine types update completed:`);
-    console.log(`   - Total entries: ${totalEntries}`);
-    console.log(`   - Records updated: ${updatedCount}`);
-    console.log(`   - Machine types added: ${Object.keys(deviceMachineTypes).length}`);
-
-    // Summary by type
-    const bevCount = Object.values(deviceMachineTypes).filter(m => m.type === 'bev').length;
-    const foodCount = Object.values(deviceMachineTypes).filter(m => m.type === 'food').length;
-    console.log(`   - Beverage machines: ${bevCount}`);
-    console.log(`   - Food machines: ${foodCount}`);
-
-  } catch (error) {
-    console.error('❌ Error updating machine types:', error.message);
-    process.exit(1);
+  if (skipped.length > 0) {
+    console.log('\n=== Skipped Machines ===')
+    skipped.forEach(s => {
+      console.log(`${s.case_serial}: ${s.reason}`)
+    })
   }
 }
 
-updateMachineTypes();
+updateMachineTypes().catch(console.error)

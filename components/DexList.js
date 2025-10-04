@@ -3,7 +3,7 @@ import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
 
 export default function DexList() {
-  const { user, signOut } = useAuth();
+  const { user, signOut, hasCredentials, credentialsLoading, checkCredentialsStatus } = useAuth();
   const [deviceSerials, setDeviceSerials] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -18,6 +18,20 @@ export default function DexList() {
   useEffect(() => {
     setIsMounted(true);
   }, []);
+
+  // Check credentials on mount and redirect if needed
+  useEffect(() => {
+    if (isMounted && !credentialsLoading) {
+      checkCredentialsStatus();
+    }
+  }, [isMounted, credentialsLoading, checkCredentialsStatus]);
+
+  // Redirect to settings if no credentials
+  useEffect(() => {
+    if (isMounted && !credentialsLoading && !hasCredentials) {
+      window.location.href = '/settings';
+    }
+  }, [isMounted, credentialsLoading, hasCredentials]);
 
   // Update clock every second
   useEffect(() => {
