@@ -1,22 +1,22 @@
 import { getUserCompanyContext, createClient } from '../../../lib/supabase/server'
 export const runtime = 'edge'
 
-export default async function handler(req, res) {
+export default async function handler(req) {
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' })
+    return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405, headers: { 'Content-Type': 'application/json' } })
   }
 
   try {
     const { user, companyId, error: authError } = await getUserCompanyContext(req)
 
     if (authError || !user) {
-      return res.status(401).json({ error: 'Authentication required' })
+      return new Response(JSON.stringify({ error: 'Authentication required' }), { status: 401, headers: { 'Content-Type': 'application/json' } })
     }
 
-    const { machineId, errorCode, errorTimestamp, actioned } = req.body
+    const { machineId, errorCode, errorTimestamp, actioned } = await req.json()
 
     if (!machineId || !errorCode || !errorTimestamp) {
-      return res.status(400).json({ error: 'Missing required fields' })
+      return new Response(JSON.stringify({ error: 'Missing required fields' }), { status: 400, headers: { 'Content-Type': 'application/json' } })
     }
 
     // Use authenticated client instead of service client - RLS will handle authorization
@@ -33,7 +33,7 @@ export default async function handler(req, res) {
 
     // Verify the machine belongs to the user's company
     if (machine.company_id !== companyId) {
-      return res.status(403).json({ error: 'Unauthorized access to this machine' })
+      return new Response(JSON.stringify({ error: 'Unauthorized access to this machine' }), { status: 403, headers: { 'Content-Type': 'application/json' } })
     }
 
     // Update the error's actioned status
@@ -59,13 +59,13 @@ export default async function handler(req, res) {
 
     if (updateError) throw updateError
 
-    return res.status(200).json({
+    return new Response(JSON.stringify({
       success: true,
       message: 'Error status updated'
-    })
+    }), { status: 200, headers: { 'Content-Type': 'application/json' } })
 
   } catch (error) {
     console.error('Error updating error status:', error)
-    return res.status(500).json({ error: 'Internal server error' })
+    return new Response(JSON.stringify({ error: 'Internal server error' }), { status: 500, headers: { 'Content-Type': 'application/json' } })
   }
 }

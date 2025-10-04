@@ -4,9 +4,9 @@ import { parseDexContent, formatDexSummary } from '../../../lib/dex-parser'
 import { parseDexToKeyValue, formatKeyValuePairs } from '../../../lib/dex-key-value-parser'
 import { parseHybridDex, getDeviceCardData } from '../../../lib/dex-hybrid-parser'
 
-export default async function handler(req, res) {
+export default async function handler(req) {
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' })
+    return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405, headers: { 'Content-Type': 'application/json' } })
   }
 
   try {
@@ -14,7 +14,7 @@ export default async function handler(req, res) {
     const { user, companyId, error: authError } = await getUserCompanyContext(req)
 
     if (authError || !user) {
-      return res.status(401).json({ error: 'Authentication required' })
+      return new Response(JSON.stringify({ error: 'Authentication required' }), { status: 401, headers: { 'Content-Type': 'application/json' } })
     }
 
     console.log(`🔧 Starting bulk DEX data collection...`)
@@ -169,11 +169,11 @@ export default async function handler(req, res) {
 
     if (!dexResponse.ok) {
       console.log(`DEX endpoint returned ${dexResponse.status} - no bulk DEX data available`)
-      return res.status(200).json({
+      return new Response(JSON.stringify({
         success: true,
         recordsCount: 0,
         message: 'No bulk DEX data available'
-      })
+      }), { status: 200, headers: { 'Content-Type': 'application/json' } })
     }
 
     const dexData = await dexResponse.json()
@@ -185,11 +185,11 @@ export default async function handler(req, res) {
 
     if (!dexData.data || !Array.isArray(dexData.data)) {
       console.log('No DEX data available in bulk response')
-      return res.status(200).json({
+      return new Response(JSON.stringify({
         success: true,
         message: 'No new DEX data available',
         recordsCount: 0
-      })
+      }), { status: 200, headers: { 'Content-Type': 'application/json' } })
     }
 
     // Step 4: Set up database connection and get existing DEX IDs
@@ -269,11 +269,11 @@ export default async function handler(req, res) {
     console.log(`Found ${newDexRecords.length} new DEX records out of ${totalInMetadata} total metadata records`)
 
     if (newDexRecords.length === 0) {
-      return res.status(200).json({
+      return new Response(JSON.stringify({
         success: true,
         recordsCount: 0,
         message: 'No new DEX records to fetch'
-      })
+      }), { status: 200, headers: { 'Content-Type': 'application/json' } })
     }
 
     // Step 6: Fetch raw DEX data for each new record using /dex/getRawDex/{dexId}
@@ -531,13 +531,13 @@ export default async function handler(req, res) {
 
     // If no records were successfully processed, return early after saving file and updating metadata
     if (processedRecords.length === 0) {
-      return res.status(200).json({
+      return new Response(JSON.stringify({
         success: true,
         recordsCount: 0,
         machinesUpdated: Object.keys(machineMetadataUpdates).length,
         message: 'No raw DEX data could be fetched, but machine metadata updated',
         errors: fetchErrors
-      })
+      }), { status: 200, headers: { 'Content-Type': 'application/json' } })
     }
 
     // Step 8: Update machine statistics (calculate stats regardless of database save success)
@@ -799,19 +799,19 @@ export default async function handler(req, res) {
       // Continue with response even if save fails
     }
 
-    return res.status(200).json({
+    return new Response(JSON.stringify({
       success: true,
       recordsCount: processedRecords.length,
       machinesUpdated: Object.keys(machineStats).length,
       message: `Successfully collected ${processedRecords.length} new DEX records`,
       errors: fetchErrors.length > 0 ? fetchErrors : undefined
-    })
+    }), { status: 200, headers: { 'Content-Type': 'application/json' } })
 
   } catch (error) {
     console.error('Error collecting bulk DEX data:', error)
-    return res.status(500).json({
+    return new Response(JSON.stringify({
       success: false,
       error: error.message || 'Failed to collect bulk DEX data'
-    })
+    }), { status: 500, headers: { 'Content-Type': 'application/json' } })
   }
 }

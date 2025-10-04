@@ -1,9 +1,9 @@
 import { getUserCompanyContext } from '../../../lib/supabase/server'
 export const runtime = 'edge'
 
-export default async function handler(req, res) {
+export default async function handler(req) {
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' })
+    return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405, headers: { 'Content-Type': 'application/json' } })
   }
 
   // Force recompile to ensure bulk collection is used
@@ -42,12 +42,12 @@ export default async function handler(req, res) {
         }
       }
 
-      return res.status(200).json({
+      return new Response(JSON.stringify({
         success: true,
         message: `DEX collection cycle completed (dev mode)`,
         machinesProcessed: mockMachines.length,
         totalRecordsCollected: totalCollected
-      })
+      }), { status: 200, headers: { 'Content-Type': 'application/json' } })
     }
 
     // Get user context from Supabase auth
@@ -56,12 +56,12 @@ export default async function handler(req, res) {
 
     if (authError || !user) {
       console.log('DEX Scheduler: No authenticated user, skipping collection')
-      return res.status(200).json({
+      return new Response(JSON.stringify({
         success: true,
         message: 'No authenticated user for DEX collection',
         machinesProcessed: 0,
         totalRecordsCollected: 0
-      })
+      }), { status: 200, headers: { 'Content-Type': 'application/json' } })
     }
 
     // Get all active machines from Supabase for this company
@@ -81,12 +81,12 @@ export default async function handler(req, res) {
 
     if (machines.length === 0) {
       console.log('No active machines found for DEX collection')
-      return res.status(200).json({
+      return new Response(JSON.stringify({
         success: true,
         message: 'No active machines found for DEX collection',
         machinesProcessed: 0,
         totalRecordsCollected: 0
-      })
+      }), { status: 200, headers: { 'Content-Type': 'application/json' } })
     }
 
     console.log(`Found ${machines.length} active machines for bulk DEX collection`)
@@ -135,20 +135,20 @@ export default async function handler(req, res) {
 
     console.log(`🕐 DEX Scheduler: Cycle completed. Processed ${machines.length} machines, ${successCount} successful, ${errors.length} errors`)
 
-    return res.status(200).json({
+    return new Response(JSON.stringify({
       success: true,
       message: `DEX collection cycle completed`,
       machinesProcessed: machines.length,
       successfulCollections: successCount,
       totalRecordsCollected: totalCollected,
       errors: errors.length > 0 ? errors : undefined
-    })
+    }), { status: 200, headers: { 'Content-Type': 'application/json' } })
 
   } catch (error) {
     console.error('🕐 DEX Scheduler: Error during collection cycle:', error)
-    return res.status(500).json({
+    return new Response(JSON.stringify({
       success: false,
       error: error.message || 'Failed to run DEX collection cycle'
-    })
+    }), { status: 500, headers: { 'Content-Type': 'application/json' } })
   }
 }

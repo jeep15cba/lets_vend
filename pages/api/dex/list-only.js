@@ -1,8 +1,8 @@
 export const runtime = 'edge'
 
-export default async function handler(req, res) {
+export default async function handler(req) {
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' })
+    return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405, headers: { 'Content-Type': 'application/json' } })
   }
 
   try {
@@ -210,7 +210,7 @@ export default async function handler(req, res) {
       sampleDexIds: dexIds.slice(0, 10)
     })
 
-    return res.status(200).json({
+    return new Response(JSON.stringify({
       success: true,
       message: `Successfully fetched DEX list with ${dexData.recordsTotal} total records`,
       summary: {
@@ -226,13 +226,13 @@ export default async function handler(req, res) {
         machines: Array.from(uniqueMachines).slice(0, 10),
         dexIds: dexIds.slice(0, 20)
       }
-    })
+    }), { status: 200, headers: { 'Content-Type': 'application/json' } })
 
   } catch (error) {
     console.error('Error fetching DEX list:', error)
-    return res.status(500).json({
+    return new Response(JSON.stringify({
       success: false,
       error: error.message || 'Failed to fetch DEX list'
-    })
+    }), { status: 500, headers: { 'Content-Type': 'application/json' } })
   }
 }

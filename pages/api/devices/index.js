@@ -1,13 +1,16 @@
 import { getUserCompanyContext } from '../../../lib/supabase/server'
 export const runtime = 'edge'
 
-export default async function handler(req, res) {
+export default async function handler(req) {
   try {
     // Get user context
     const { user, companyId, role, error: authError } = await getUserCompanyContext(req)
 
     if (authError || !user) {
-      return res.status(401).json({ error: 'Authentication required' })
+      return new Response(JSON.stringify({ error: 'Authentication required' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' }
+      })
     }
 
     if (req.method === 'GET') {
@@ -43,30 +46,44 @@ export default async function handler(req, res) {
           }
         })
 
-        return res.status(200).json({
+        return new Response(JSON.stringify({
           success: true,
           devices: enhancedMachines || [],
           lastUpdated: new Date().toISOString()
+        }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' }
         })
 
       } catch (error) {
         console.error('Error fetching devices:', error)
-        return res.status(500).json({
+        return new Response(JSON.stringify({
           success: false,
           error: 'Failed to fetch devices'
+        }), {
+          status: 500,
+          headers: { 'Content-Type': 'application/json' }
         })
       }
 
     } else {
-      res.setHeader('Allow', ['GET'])
-      return res.status(405).json({ error: 'Method not allowed' })
+      return new Response(JSON.stringify({ error: 'Method not allowed' }), {
+        status: 405,
+        headers: {
+          'Content-Type': 'application/json',
+          'Allow': 'GET'
+        }
+      })
     }
 
   } catch (error) {
     console.error('Devices API error:', error)
-    return res.status(500).json({
+    return new Response(JSON.stringify({
       success: false,
       error: 'Internal server error'
+    }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
     })
   }
 }

@@ -1,9 +1,9 @@
 import { getUserCompanyContext } from '../../../lib/supabase/server'
 export const runtime = 'edge'
 
-export default async function handler(req, res) {
+export default async function handler(req) {
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' })
+    return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405, headers: { 'Content-Type': 'application/json' } })
   }
 
   try {
@@ -65,16 +65,16 @@ export default async function handler(req, res) {
 
     console.log('🔧 User metadata updated successfully with hasValidCredentials:', hasCredentials)
 
-    return res.status(200).json({
+    return new Response(JSON.stringify({
       message: 'User metadata updated successfully',
       hasValidCredentials: forceCredentials
-    })
+    }), { status: 200, headers: { 'Content-Type': 'application/json' } })
 
   } catch (error) {
     console.error('Error updating user metadata:', error)
-    return res.status(500).json({
+    return new Response(JSON.stringify({
       error: 'Failed to update user metadata',
       details: error.message
-    })
+    }), { status: 500, headers: { 'Content-Type': 'application/json' } })
   }
 }

@@ -1,15 +1,15 @@
 import { createServiceClient } from '../../../lib/supabase/server'
 export const runtime = 'edge'
 
-export default async function handler(req, res) {
+export default async function handler(req) {
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' })
+    return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405, headers: { 'Content-Type': 'application/json' } })
   }
 
-  const { email, password } = req.body
+  const { email, password } = await req.json()
 
   if (!email || !password) {
-    return res.status(400).json({ error: 'Email and password are required' })
+    return new Response(JSON.stringify({ error: 'Email and password are required' }), { status: 400, headers: { 'Content-Type': 'application/json' } })
   }
 
   try {
@@ -23,19 +23,11 @@ export default async function handler(req, res) {
 
     if (error) {
       console.error('Login error:', error)
-      return res.status(401).json({ error: error.message })
+      return new Response(JSON.stringify({ error: error.message }), { status: 401, headers: { 'Content-Type': 'application/json' } })
     }
 
     if (!data.user) {
-      return res.status(401).json({ error: 'Invalid credentials' })
-    }
-
-    // Set auth cookies manually (for server-side session management)
-    if (data.session) {
-      res.setHeader('Set-Cookie', [
-        `sb-hkapfjibtaqmdpgxseuj-auth-token=${data.session.access_token}; HttpOnly; Path=/; Max-Age=3600; SameSite=Lax`,
-        `sb-hkapfjibtaqmdpgxseuj-auth-token-code-verifier=${data.session.refresh_token}; HttpOnly; Path=/; Max-Age=86400; SameSite=Lax`
-      ])
+      return new Response(JSON.stringify({ error: 'Invalid credentials' }), { status: 401, headers: { 'Content-Type': 'application/json' } })
     }
 
     console.log('✅ User login successful:', {
@@ -43,15 +35,24 @@ export default async function handler(req, res) {
       email: data.user.email
     })
 
-    return res.status(200).json({
+    // Set auth cookies manually (for server-side session management)
+    const headers = { 'Content-Type': 'application/json' }
+    if (data.session) {
+      headers['Set-Cookie'] = [
+        `sb-hkapfjibtaqmdpgxseuj-auth-token=${data.session.access_token}; HttpOnly; Path=/; Max-Age=3600; SameSite=Lax`,
+        `sb-hkapfjibtaqmdpgxseuj-auth-token-code-verifier=${data.session.refresh_token}; HttpOnly; Path=/; Max-Age=86400; SameSite=Lax`
+      ].join(', ')
+    }
+
+    return new Response(JSON.stringify({
       success: true,
       user: data.user,
       session: data.session,
       message: 'Login successful'
-    })
+    }), { status: 200, headers })
 
   } catch (error) {
     console.error('Login error:', error)
-    return res.status(500).json({ error: 'Internal server error' })
+    return new Response(JSON.stringify({ error: 'Internal server error' }), { status: 500, headers: { 'Content-Type': 'application/json' } })
   }
 }

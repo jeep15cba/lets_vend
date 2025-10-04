@@ -1,9 +1,9 @@
 import { getUserDexCredentials } from '../../../lib/user-credentials'
 export const runtime = 'edge'
 
-export default async function handler(req, res) {
+export default async function handler(req) {
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' })
+    return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405, headers: { 'Content-Type': 'application/json' } })
   }
 
   try {
@@ -11,10 +11,10 @@ export default async function handler(req, res) {
     const credentials = await getUserDexCredentials(req)
 
     if (!credentials.isConfigured || !credentials.username || !credentials.password) {
-      return res.status(400).json({
+      return new Response(JSON.stringify({
         success: false,
         error: credentials.error || 'DEX credentials not configured'
-      })
+      }), { status: 400, headers: { 'Content-Type': 'application/json' } })
     }
 
     const { username, password, siteUrl } = credentials
@@ -34,10 +34,10 @@ export default async function handler(req, res) {
     })
 
     if (!loginPageResponse.ok) {
-      return res.status(200).json({
+      return new Response(JSON.stringify({
         success: false,
         error: `Unable to reach DEX platform at ${siteUrl}`
-      })
+      }), { status: 200, headers: { 'Content-Type': 'application/json' } })
     }
 
     const cookies = loginPageResponse.headers.get('set-cookie')
@@ -66,23 +66,23 @@ export default async function handler(req, res) {
 
     if (loginResponse.status === 302) {
       // Successful login - redirect indicates success
-      return res.status(200).json({
+      return new Response(JSON.stringify({
         success: true,
         message: 'DEX credentials are valid and connection successful'
-      })
+      }), { status: 200, headers: { 'Content-Type': 'application/json' } })
     } else {
       // Failed login
-      return res.status(200).json({
+      return new Response(JSON.stringify({
         success: false,
         error: 'Invalid DEX credentials or authentication failed'
-      })
+      }), { status: 200, headers: { 'Content-Type': 'application/json' } })
     }
 
   } catch (error) {
     console.error('Error testing DEX connection:', error)
-    return res.status(500).json({
+    return new Response(JSON.stringify({
       success: false,
       error: 'Failed to test DEX connection: ' + error.message
-    })
+    }), { status: 500, headers: { 'Content-Type': 'application/json' } })
   }
 }

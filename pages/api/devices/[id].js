@@ -1,9 +1,9 @@
 import { getUserCompanyContext } from '../../../lib/supabase/server'
 export const runtime = 'edge'
 
-export default async function handler(req, res) {
+export default async function handler(req) {
   if (req.method !== 'PUT') {
-    return res.status(405).json({ error: 'Method not allowed' })
+    return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405, headers: { 'Content-Type': 'application/json' } })
   }
 
   try {
@@ -20,31 +20,32 @@ export default async function handler(req, res) {
       console.log('🔧 DEV MODE: Using fake user for device update')
     } else {
       if (authError || !user) {
-        return res.status(401).json({
+        return new Response(JSON.stringify({
           success: false,
           error: 'Authentication required'
-        })
+        }), { status: 401, headers: { 'Content-Type': 'application/json' } })
       }
       userId = user.id
       userEmail = user.email
     }
 
-    const { id } = req.query
-    const { location, machine_type, cash_enabled } = req.body
+    const url = new URL(req.url)
+    const id = url.pathname.split('/').pop()
+    const { location, machine_type, cash_enabled } = await req.json()
 
     if (!id) {
-      return res.status(400).json({
+      return new Response(JSON.stringify({
         success: false,
         error: 'Device ID is required'
-      })
+      }), { status: 400, headers: { 'Content-Type': 'application/json' } })
     }
 
     // Validate input
     if (machine_type && !['unknown', 'beverage', 'food'].includes(machine_type)) {
-      return res.status(400).json({
+      return new Response(JSON.stringify({
         success: false,
         error: 'Invalid machine type. Must be unknown, beverage, or food'
-      })
+      }), { status: 400, headers: { 'Content-Type': 'application/json' } })
     }
 
     console.log(`Updating device ${id} with:`, {
@@ -61,7 +62,7 @@ export default async function handler(req, res) {
         cash_enabled
       })
 
-      return res.status(200).json({
+      return new Response(JSON.stringify({
         success: true,
         message: `Device ${id} updated successfully (dev mode)`,
         device: {
@@ -71,7 +72,7 @@ export default async function handler(req, res) {
           cash_enabled,
           updated_at: new Date().toISOString()
         }
-      })
+      }), { status: 200, headers: { 'Content-Type': 'application/json' } })
     }
 
     // TODO: In production, update the device in Supabase
@@ -102,7 +103,7 @@ export default async function handler(req, res) {
     // For now, simulate successful update
     console.log(`Device ${id} would be updated successfully in production`)
 
-    return res.status(200).json({
+    return new Response(JSON.stringify({
       success: true,
       message: `Device ${id} updated successfully`,
       device: {
@@ -112,13 +113,13 @@ export default async function handler(req, res) {
         cash_enabled,
         updated_at: new Date().toISOString()
       }
-    })
+    }), { status: 200, headers: { 'Content-Type': 'application/json' } })
 
   } catch (error) {
     console.error('Error updating device:', error)
-    return res.status(500).json({
+    return new Response(JSON.stringify({
       success: false,
       error: error.message || 'Failed to update device'
-    })
+    }), { status: 500, headers: { 'Content-Type': 'application/json' } })
   }
 }

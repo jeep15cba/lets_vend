@@ -2,9 +2,9 @@
 export const runtime = 'edge'
 import { getUserDexCredentials } from '../../../lib/user-credentials'
 
-export default async function handler(req, res) {
+export default async function handler(req) {
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
+    return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405, headers: { 'Content-Type': 'application/json' } });
   }
 
   // Get user-specific DEX credentials
@@ -19,10 +19,10 @@ export default async function handler(req, res) {
   });
 
   if (!credentials.isConfigured || !credentials.username || !credentials.password) {
-    return res.status(400).json({
+    return new Response(JSON.stringify({
       error: credentials.error || 'DEX credentials not configured',
       needsConfiguration: true
-    });
+    }), { status: 400, headers: { 'Content-Type': 'application/json' } });
   }
 
   const { username, password, siteUrl } = credentials;
@@ -112,28 +112,28 @@ export default async function handler(req, res) {
 
       console.log('Final combined cookies:', allCookies?.substring(0, 200) + '...');
 
-      return res.status(200).json({
+      return new Response(JSON.stringify({
         success: true,
         cookies: allCookies,
         message: 'Authentication successful'
-      });
+      }), { status: 200, headers: { 'Content-Type': 'application/json' } });
     } else {
       console.error('Authentication failed, status:', loginResponse.status);
       console.error('Redirect location indicates failure:', redirectLocation);
       const responseText = await loginResponse.text();
       console.error('Response body:', responseText.substring(0, 200));
-      return res.status(401).json({
+      return new Response(JSON.stringify({
         error: 'Authentication failed',
         details: {
           status: loginResponse.status,
           redirectLocation,
           bodyPreview: responseText.substring(0, 200)
         }
-      });
+      }), { status: 401, headers: { 'Content-Type': 'application/json' } });
     }
 
   } catch (error) {
     console.error('Auth error:', error);
-    return res.status(500).json({ error: 'Authentication error: ' + error.message });
+    return new Response(JSON.stringify({ error: 'Authentication error: ' + error.message }), { status: 500, headers: { 'Content-Type': 'application/json' } });
   }
 }

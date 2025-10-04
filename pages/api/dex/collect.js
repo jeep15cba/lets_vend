@@ -2,26 +2,26 @@ import { getUserCompanyContext } from '../../../lib/supabase/server'
 export const runtime = 'edge'
 import { getUserDexCredentials } from '../../../lib/user-credentials'
 
-export default async function handler(req, res) {
+export default async function handler(req) {
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' })
+    return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405, headers: { 'Content-Type': 'application/json' } })
   }
 
   try {
-    const { machineId } = req.body
+    const { machineId } = await req.json()
 
     if (!machineId) {
-      return res.status(400).json({
+      return new Response(JSON.stringify({
         success: false,
         error: 'Machine ID is required'
-      })
+      }), { status: 400, headers: { 'Content-Type': 'application/json' } })
     }
 
     // Get user context from Supabase auth
     const { user, companyId, error: authError } = await getUserCompanyContext(req)
 
     if (authError || !user) {
-      return res.status(401).json({ error: 'Authentication required' })
+      return new Response(JSON.stringify({ error: 'Authentication required' }), { status: 401, headers: { 'Content-Type': 'application/json' } })
     }
 
     console.log(`🔧 Starting DEX data collection for machine ${machineId}...`)
@@ -190,11 +190,11 @@ export default async function handler(req, res) {
 
     if (!dexResponse.ok) {
       console.log(`DEX endpoint returned ${dexResponse.status} for machine ${machineId} - DEX data may not be available`)
-      return res.status(200).json({
+      return new Response(JSON.stringify({
         success: true,
         recordsCount: 0,
         message: `No DEX data available for machine ${machineId} (API returned ${dexResponse.status})`
-      })
+      }), { status: 200, headers: { 'Content-Type': 'application/json' } })
     }
 
     const dexData = await dexResponse.json()
@@ -206,11 +206,11 @@ export default async function handler(req, res) {
 
     if (!dexData.data || !Array.isArray(dexData.data)) {
       console.log('No DEX data available for machine', machineId)
-      return res.status(200).json({
+      return new Response(JSON.stringify({
         success: true,
         message: 'No new DEX data available',
         recordsCount: 0
-      })
+      }), { status: 200, headers: { 'Content-Type': 'application/json' } })
     }
 
     // Step 3: Process and save DEX data to Supabase
@@ -227,10 +227,10 @@ export default async function handler(req, res) {
 
     if (machineError || !machine) {
       console.warn(`Machine not found for ID ${machineId}:`, machineError)
-      return res.status(404).json({
+      return new Response(JSON.stringify({
         success: false,
         error: 'Machine not found in database'
-      })
+      }), { status: 404, headers: { 'Content-Type': 'application/json' } })
     }
 
     const processedDexRecords = []
@@ -283,11 +283,11 @@ export default async function handler(req, res) {
 
     if (processedDexRecords.length === 0) {
       console.log('No new DEX records to save')
-      return res.status(200).json({
+      return new Response(JSON.stringify({
         success: true,
         recordsCount: 0,
         message: 'No new DEX records available'
-      })
+      }), { status: 200, headers: { 'Content-Type': 'application/json' } })
     }
 
     // Save DEX records to Supabase (create table if needed)
@@ -367,17 +367,17 @@ export default async function handler(req, res) {
       // Continue with response even if save fails
     }
 
-    return res.status(200).json({
+    return new Response(JSON.stringify({
       success: true,
       recordsCount: processedDexRecords.length,
       message: `Successfully collected ${processedDexRecords.length} DEX records`
-    })
+    }), { status: 200, headers: { 'Content-Type': 'application/json' } })
 
   } catch (error) {
     console.error('Error collecting DEX data:', error)
-    return res.status(500).json({
+    return new Response(JSON.stringify({
       success: false,
       error: error.message || 'Failed to collect DEX data'
-    })
+    }), { status: 500, headers: { 'Content-Type': 'application/json' } })
   }
 }

@@ -2,9 +2,9 @@ import { createServiceClient } from '../../../lib/supabase/server'
 export const runtime = 'edge'
 import { encrypt, decrypt } from '../../../lib/encryption'
 
-export default async function handler(req, res) {
+export default async function handler(req) {
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' })
+    return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405, headers: { 'Content-Type': 'application/json' } })
   }
 
   try {
@@ -15,9 +15,9 @@ export default async function handler(req, res) {
     const newPassword = process.env.CANTALOUPE_PASSWORD
 
     if (!newUsername || !newPassword) {
-      return res.status(400).json({
+      return new Response(JSON.stringify({
         error: 'CANTALOUPE_USERNAME and CANTALOUPE_PASSWORD must be set in environment variables'
-      })
+      }), { status: 400, headers: { 'Content-Type': 'application/json' } })
     }
 
     console.log('Using credentials from environment variables')
@@ -85,17 +85,17 @@ export default async function handler(req, res) {
     const successCount = results.filter(r => r.success).length
     const failCount = results.filter(r => !r.success).length
 
-    return res.status(200).json({
+    return new Response(JSON.stringify({
       success: true,
       message: `Re-encryption complete: ${successCount} succeeded, ${failCount} failed`,
       results
-    })
+    }), { status: 200, headers: { 'Content-Type': 'application/json' } })
 
   } catch (error) {
     console.error('🔐 Re-encryption error:', error)
-    return res.status(500).json({
+    return new Response(JSON.stringify({
       success: false,
       error: error.message || 'Failed to re-encrypt credentials'
-    })
+    }), { status: 500, headers: { 'Content-Type': 'application/json' } })
   }
 }

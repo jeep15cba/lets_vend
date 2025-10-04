@@ -1,15 +1,15 @@
 import { createServiceClient } from '../../../lib/supabase/server'
 export const runtime = 'edge'
 
-export default async function handler(req, res) {
+export default async function handler(req) {
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' })
+    return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405, headers: { 'Content-Type': 'application/json' } })
   }
 
-  const { email, password, metadata = {} } = req.body
+  const { email, password, metadata = {} } = await req.json()
 
   if (!email || !password) {
-    return res.status(400).json({ error: 'Email and password are required' })
+    return new Response(JSON.stringify({ error: 'Email and password are required' }), { status: 400, headers: { 'Content-Type': 'application/json' } })
   }
 
   try {
@@ -28,7 +28,7 @@ export default async function handler(req, res) {
 
     if (authError) {
       console.error('Auth error:', authError)
-      return res.status(400).json({ error: authError.message })
+      return new Response(JSON.stringify({ error: authError.message }), { status: 400, headers: { 'Content-Type': 'application/json' } })
     }
 
     // 2. Create company record if company_name provided
@@ -48,7 +48,7 @@ export default async function handler(req, res) {
         console.error('Company creation error:', companyError)
         // If company creation fails, we should clean up the user
         await supabase.auth.admin.deleteUser(authData.user.id)
-        return res.status(400).json({ error: 'Failed to create company' })
+        return new Response(JSON.stringify({ error: 'Failed to create company' }), { status: 400, headers: { 'Content-Type': 'application/json' } })
       }
 
       companyId = companyData.id
@@ -72,7 +72,7 @@ export default async function handler(req, res) {
 
       if (updateError) {
         console.error('User update error:', updateError)
-        return res.status(400).json({ error: 'Failed to link user to company' })
+        return new Response(JSON.stringify({ error: 'Failed to link user to company' }), { status: 400, headers: { 'Content-Type': 'application/json' } })
       }
     }
 
@@ -82,14 +82,14 @@ export default async function handler(req, res) {
       companyId
     })
 
-    return res.status(200).json({
+    return new Response(JSON.stringify({
       success: true,
       user: authData.user,
       message: 'Account created successfully'
-    })
+    }), { status: 200, headers: { 'Content-Type': 'application/json' } })
 
   } catch (error) {
     console.error('Signup error:', error)
-    return res.status(500).json({ error: 'Internal server error' })
+    return new Response(JSON.stringify({ error: 'Internal server error' }), { status: 500, headers: { 'Content-Type': 'application/json' } })
   }
 }

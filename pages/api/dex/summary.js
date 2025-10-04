@@ -1,9 +1,9 @@
 import { getUserCompanyContext } from '../../../lib/supabase/server'
 export const runtime = 'edge'
 
-export default async function handler(req, res) {
+export default async function handler(req) {
   if (req.method !== 'GET') {
-    return res.status(405).json({ error: 'Method not allowed' })
+    return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405, headers: { 'Content-Type': 'application/json' } })
   }
 
   try {
@@ -11,13 +11,14 @@ export default async function handler(req, res) {
     const { user, companyId, error: authError } = await getUserCompanyContext(req)
 
     if (authError || !user) {
-      return res.status(401).json({ error: 'Authentication required' })
+      return new Response(JSON.stringify({ error: 'Authentication required' }), { status: 401, headers: { 'Content-Type': 'application/json' } })
     }
 
-    const { case_serial } = req.query
+    const url = new URL(req.url)
+    const case_serial = url.searchParams.get('case_serial')
 
     if (!case_serial) {
-      return res.status(400).json({ error: 'case_serial parameter required' })
+      return new Response(JSON.stringify({ error: 'case_serial parameter required' }), { status: 400, headers: { 'Content-Type': 'application/json' } })
     }
 
     // Set up database connection
@@ -35,15 +36,15 @@ export default async function handler(req, res) {
 
     if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
       console.error('Error fetching DEX summary:', error)
-      return res.status(500).json({ error: 'Failed to fetch DEX data' })
+      return new Response(JSON.stringify({ error: 'Failed to fetch DEX data' }), { status: 500, headers: { 'Content-Type': 'application/json' } })
     }
 
     if (!dexRecord) {
-      return res.status(200).json({
+      return new Response(JSON.stringify({
         success: true,
         hasData: false,
         message: 'No DEX data available for this machine'
-      })
+      }), { status: 200, headers: { 'Content-Type': 'application/json' } })
     }
 
     const summary = dexRecord.parsed_data?.summary || null
@@ -51,7 +52,7 @@ export default async function handler(req, res) {
     const keyValueGroups = dexRecord.parsed_data?.hybridData?.keyValueGroups || null
     const keyValue = dexRecord.parsed_data?.hybridData?.keyValue || null
 
-    return res.status(200).json({
+    return new Response(JSON.stringify({
       success: true,
       hasData: true,
       summary,
@@ -60,10 +61,10 @@ export default async function handler(req, res) {
       keyValue,
       lastUpdate: dexRecord.created_at,
       rawLength: dexRecord.raw_content?.length || 0
-    })
+    }), { status: 200, headers: { 'Content-Type': 'application/json' } })
 
   } catch (error) {
     console.error('Error in DEX summary API:', error)
-    return res.status(500).json({ error: 'Internal server error' })
+    return new Response(JSON.stringify({ error: 'Internal server error' }), { status: 500, headers: { 'Content-Type': 'application/json' } })
   }
 }

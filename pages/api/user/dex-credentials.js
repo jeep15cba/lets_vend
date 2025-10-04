@@ -2,7 +2,7 @@ import { getUserCompanyContext } from '../../../lib/supabase/server'
 export const runtime = 'edge'
 import { encrypt, decrypt } from '../../../lib/encryption'
 
-export default async function handler(req, res) {
+export default async function handler(req) {
   try {
     // Try to get user context from Supabase auth (may fail if no session)
     let { user, companyId, role, error: authError } = await getUserCompanyContext(req)
@@ -10,7 +10,7 @@ export default async function handler(req, res) {
     console.log('🔧 DEX credentials API called, user authenticated:', !!user)
 
     if (!user || authError) {
-      return res.status(401).json({ error: 'Authentication required' })
+      return new Response(JSON.stringify({ error: 'Authentication required' }), { status: 401, headers: { 'Content-Type': 'application/json' } })
     }
 
     console.log('🔧 Using user:', user.email)
@@ -41,54 +41,54 @@ export default async function handler(req, res) {
 
           if (isPlaceholder) {
             // Return empty state for placeholder records
-            return res.status(200).json({
+            return new Response(JSON.stringify({
               username: '',
               siteUrl: data.site_url || 'https://dashboard.cantaloupe.online',
               isConfigured: false
-            })
+            }), { status: 200, headers: { 'Content-Type': 'application/json' } })
           }
 
           // Try to decrypt real credentials
           try {
-            return res.status(200).json({
+            return new Response(JSON.stringify({
               username: await decrypt(data.username_encrypted),
               siteUrl: data.site_url || 'https://dashboard.cantaloupe.online',
               isConfigured: true,
               createdAt: data.created_at
-            })
+            }), { status: 200, headers: { 'Content-Type': 'application/json' } })
           } catch (decryptError) {
             console.error('Failed to decrypt credentials:', decryptError)
             // If decryption fails, treat as unconfigured
-            return res.status(200).json({
+            return new Response(JSON.stringify({
               username: '',
               siteUrl: data.site_url || 'https://dashboard.cantaloupe.online',
               isConfigured: false
-            })
+            }), { status: 200, headers: { 'Content-Type': 'application/json' } })
           }
         }
 
         // No credentials found - return empty state
-        return res.status(200).json({
+        return new Response(JSON.stringify({
           username: '',
           siteUrl: 'https://dashboard.cantaloupe.online',
           isConfigured: false
-        })
+        }), { status: 200, headers: { 'Content-Type': 'application/json' } })
 
       } catch (error) {
         console.error('Error fetching credentials:', error)
-        return res.status(500).json({
+        return new Response(JSON.stringify({
           error: 'Failed to fetch credentials',
           details: error.message,
           code: error.code
-        })
+        }), { status: 500, headers: { 'Content-Type': 'application/json' } })
       }
 
     } else if (req.method === 'PUT') {
       // Save/update credentials
-      const { username, password, siteUrl } = req.body
+      const { username, password, siteUrl } = await req.json()
 
       if (!username || !siteUrl) {
-        return res.status(400).json({ error: 'Username and site URL are required' })
+        return new Response(JSON.stringify({ error: 'Username and site URL are required' }), { status: 400, headers: { 'Content-Type': 'application/json' } })
       }
 
       try {
@@ -166,28 +166,27 @@ export default async function handler(req, res) {
           }
         }
 
-        return res.status(200).json({
+        return new Response(JSON.stringify({
           message: 'Credentials saved successfully',
           isConfigured: true,
           credentialsValid
-        })
+        }), { status: 200, headers: { 'Content-Type': 'application/json' } })
 
       } catch (error) {
         console.error('Error saving credentials:', error)
-        return res.status(500).json({
+        return new Response(JSON.stringify({
           error: 'Failed to save credentials',
           details: error.message,
           code: error.code
-        })
+        }), { status: 500, headers: { 'Content-Type': 'application/json' } })
       }
 
     } else {
-      res.setHeader('Allow', ['GET', 'PUT'])
-      return res.status(405).json({ error: 'Method not allowed' })
+      return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405, headers: { 'Content-Type': 'application/json', 'Allow': 'GET, PUT' } })
     }
 
   } catch (error) {
     console.error('DEX credentials API error:', error)
-    return res.status(500).json({ error: 'Internal server error' })
+    return new Response(JSON.stringify({ error: 'Internal server error' }), { status: 500, headers: { 'Content-Type': 'application/json' } })
   }
 }
