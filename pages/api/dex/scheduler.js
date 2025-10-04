@@ -1,4 +1,4 @@
-import { getUserCompanyContext, createServiceClient } from '../../../lib/supabase/server'
+import { getUserCompanyContext, createClient } from '../../../lib/supabase/server'
 export const runtime = 'edge'
 
 export default async function handler(req) {
@@ -63,8 +63,8 @@ export default async function handler(req) {
       }), { status: 200, headers: { 'Content-Type': 'application/json' } })
     }
 
-    // Get all active machines from Supabase for this company
-    const { supabase } = createServiceClient()
+    // Get all active machines from Supabase for this company with RLS
+    const { supabase } = createClient(req)
 
     const { data: machines, error } = await supabase
       .from('machines')

@@ -1,4 +1,4 @@
-import { getUserCompanyContext, createServiceClient } from '../../../lib/supabase/server'
+import { getUserCompanyContext, createClient } from '../../../lib/supabase/server'
 export const runtime = 'edge'
 import { parseDexContent, formatDexSummary } from '../../../lib/dex-parser'
 import { parseDexToKeyValue, formatKeyValuePairs } from '../../../lib/dex-key-value-parser'
@@ -192,8 +192,8 @@ export default async function handler(req) {
       }), { status: 200, headers: { 'Content-Type': 'application/json' } })
     }
 
-    // Step 4: Set up database connection and get existing DEX IDs
-    const { supabase } = createServiceClient()
+    // Step 4: Set up database connection with RLS and get existing DEX IDs
+    const { supabase } = createClient(req)
 
     // Get all machines for this company
     const { data: machines, error: machinesError } = await supabase

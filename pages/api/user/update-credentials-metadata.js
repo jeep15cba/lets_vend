@@ -1,4 +1,4 @@
-import { getUserCompanyContext, createServiceClient } from '../../../lib/supabase/server'
+import { getUserCompanyContext, createClient } from '../../../lib/supabase/server'
 export const runtime = 'edge'
 
 export default async function handler(req) {
@@ -7,8 +7,8 @@ export default async function handler(req) {
   }
 
   try {
-    // Get the current user - try to get from session first
-    const { supabase: adminSupabase } = createServiceClient()
+    // Get the current user with RLS
+    const { supabase: adminSupabase } = createClient(req)
 
     // List all users to find the right one
     const { data: users, error: listError } = await adminSupabase.auth.admin.listUsers()

@@ -1,4 +1,4 @@
-import { createServiceClient } from '../../../lib/supabase/server'
+import { createClient } from '../../../lib/supabase/server'
 export const runtime = 'edge'
 import { encrypt, decrypt } from '../../../lib/encryption'
 
@@ -22,7 +22,7 @@ export default async function handler(req) {
 
     console.log('Using credentials from environment variables')
 
-    const { supabase } = createServiceClient()
+    const { supabase } = createClient(req)
 
     // Get all user credentials
     const { data: credentials, error: fetchError } = await supabase

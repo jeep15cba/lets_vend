@@ -1,4 +1,4 @@
-import { getUserCompanyContext, createServiceClient } from '../../../lib/supabase/server'
+import { getUserCompanyContext, createClient } from '../../../lib/supabase/server'
 export const runtime = 'edge'
 import { getUserDexCredentials } from '../../../lib/user-credentials'
 
@@ -213,8 +213,8 @@ export default async function handler(req) {
       }), { status: 200, headers: { 'Content-Type': 'application/json' } })
     }
 
-    // Step 3: Process and save DEX data to Supabase
-    const { supabase } = createServiceClient()
+    // Step 3: Process and save DEX data to Supabase with RLS
+    const { supabase } = createClient(req)
 
     // First, get the actual machine record to find the case_serial
     const { data: machine, error: machineError } = await supabase

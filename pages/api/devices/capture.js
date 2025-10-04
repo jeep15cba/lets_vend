@@ -1,4 +1,4 @@
-import { getUserCompanyContext, createServiceClient } from '../../../lib/supabase/server'
+import { getUserCompanyContext, createClient } from '../../../lib/supabase/server'
 export const runtime = 'edge'
 import { getUserDexCredentials } from '../../../lib/user-credentials'
 
@@ -134,8 +134,8 @@ export default async function handler(req) {
     }
 
     // Step 3: Process and save devices to Supabase
-    // Create Supabase client early for location processing
-    const { supabase } = createServiceClient()
+    // Create Supabase client with RLS
+    const { supabase } = createClient(req)
 
     const processedDevices = []
 

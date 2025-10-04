@@ -1,4 +1,4 @@
-import { getUserCompanyContext, createServiceClient } from '../../../lib/supabase/server'
+import { getUserCompanyContext, createClient } from '../../../lib/supabase/server'
 export const runtime = 'edge'
 
 export default async function handler(req) {
@@ -21,8 +21,8 @@ export default async function handler(req) {
       return new Response(JSON.stringify({ error: 'case_serial parameter required' }), { status: 400, headers: { 'Content-Type': 'application/json' } })
     }
 
-    // Set up database connection
-    const { supabase } = createServiceClient()
+    // Set up database connection with RLS
+    const { supabase } = createClient(req)
 
     // Get the most recent DEX record for this machine
     const { data: dexRecord, error } = await supabase

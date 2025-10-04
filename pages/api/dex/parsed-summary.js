@@ -1,6 +1,6 @@
 // API endpoint to get parsed DEX data summary for device cards
 export const runtime = 'edge'
-import { getUserCompanyContext, createServiceClient } from '../../../lib/supabase/server'
+import { getUserCompanyContext, createClient } from '../../../lib/supabase/server'
 
 export default async function handler(req) {
   if (req.method !== 'GET') {
@@ -22,8 +22,8 @@ export default async function handler(req) {
       return new Response(JSON.stringify({ error: 'case_serial parameter is required' }), { status: 400, headers: { 'Content-Type': 'application/json' } })
     }
 
-    // Get database connection
-    const { supabase } = createServiceClient()
+    // Get database connection with RLS
+    const { supabase } = createClient(req)
 
     // Get the machine for this company
     const { data: machine, error: machineError } = await supabase

@@ -1,4 +1,4 @@
-import { getUserCompanyContext, createServiceClient } from '../../../lib/supabase/server'
+import { getUserCompanyContext, createClient } from '../../../lib/supabase/server'
 export const runtime = 'edge'
 import { encrypt, decrypt } from '../../../lib/encryption'
 
@@ -18,9 +18,8 @@ export default async function handler(req) {
     if (req.method === 'GET') {
       // Get existing credentials
       try {
-        // Try to fetch from Supabase user_credentials table
-        // Use service role client to bypass RLS during auth transition
-        const { supabase } = createServiceClient()
+        // Fetch from Supabase user_credentials table with RLS
+        const { supabase } = createClient(req)
 
         const { data, error } = await supabase
           .from('user_credentials')
@@ -95,9 +94,8 @@ export default async function handler(req) {
         const encryptedUsername = await encrypt(username)
         const encryptedPassword = password ? await encrypt(password) : null
 
-        // Try to save to Supabase user_credentials table
-        // TEMPORARY: Use service role client to bypass RLS during session sync fix
-        const { supabase } = createServiceClient()
+        // Save to Supabase user_credentials table with RLS
+        const { supabase } = createClient(req)
 
         const credentialsData = {
           user_id: user.id,
@@ -132,35 +130,6 @@ export default async function handler(req) {
         } catch (testError) {
           console.error('DEX credentials test failed:', testError)
           credentialsValid = false
-        }
-
-        // Update user metadata with credential status
-        if (credentialsValid) {
-          console.log('🔧 Updating user metadata with hasValidCredentials: true')
-          try {
-            const { supabase: adminSupabase } = createServiceClient()
-
-            const { error: updateError } = await adminSupabase.auth.admin.updateUserById(user.id, {
-              user_metadata: {
-                ...user.user_metadata,
-                hasValidCredentials: true,
-                credentialsLastValidated: new Date().toISOString()
-              },
-              app_metadata: {
-                ...user.app_metadata,
-                company_id: user.user_metadata?.company_id,
-                role: user.user_metadata?.role || 'user'
-              }
-            })
-
-            if (updateError) {
-              console.error('Failed to update user metadata:', updateError)
-            } else {
-              console.log('🔧 User metadata updated successfully')
-            }
-          } catch (metadataError) {
-            console.error('Error updating user metadata:', metadataError)
-          }
         }
 
         return new Response(JSON.stringify({

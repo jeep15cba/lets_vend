@@ -1,4 +1,4 @@
-import { createServiceClient } from '../../../lib/supabase/server'
+import { createClient } from '../../../lib/supabase/server'
 export const runtime = 'edge'
 
 export default async function handler(req) {
@@ -13,7 +13,7 @@ export default async function handler(req) {
   }
 
   try {
-    const { supabase } = createServiceClient()
+    const { supabase } = createClient(req)
 
     // 1. Create the user account first
     const { data: authData, error: authError } = await supabase.auth.admin.createUser({
