@@ -1298,23 +1298,24 @@ export default function Devices() {
 
               {/* DEX Collection Status - Takes 1/3 on mobile */}
               {dexCollectionActive && (
-                <div className="flex-shrink-0 bg-green-50 border border-green-200 rounded-lg px-3 py-2 text-xs">
-                  <div className="flex items-center text-green-700">
+                <div className="flex-shrink-0 bg-green-50 border border-green-200 rounded-lg px-3 py-2">
+                  <div className="flex items-center text-green-700 text-xs mb-1">
                     <div className="animate-pulse w-2 h-2 bg-green-500 rounded-full mr-2"></div>
                     <span className="font-medium">20min Timer</span>
                   </div>
-                  <div className="text-green-600 text-xs mt-1">
-                    Next: {(() => {
-                      const now = new Date();
-                      const minutes = now.getMinutes();
+                  <div className="text-sm sm:text-lg font-bold text-green-700">
+                    {(() => {
+                      // Get current time in AEST
+                      const aestTime = new Date(currentTime.toLocaleString('en-US', { timeZone: 'Australia/Sydney' }));
+                      const minutes = aestTime.getMinutes();
                       const nextInterval = Math.ceil(minutes / 20) * 20;
-                      const nextTime = new Date(now);
+                      const nextTime = new Date(aestTime);
                       nextTime.setMinutes(nextInterval, 0, 0);
                       if (nextInterval >= 60) {
                         nextTime.setHours(nextTime.getHours() + 1);
                         nextTime.setMinutes(nextInterval % 60, 0, 0);
                       }
-                      return nextTime.toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit', hour12: true });
+                      return nextTime.toLocaleTimeString('en-AU', { hour: 'numeric', minute: '2-digit', hour12: true });
                     })()}
                   </div>
                 </div>
