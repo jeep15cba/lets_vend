@@ -1,22 +1,21 @@
-// Using Node.js runtime for filesystem access
-// export const runtime = 'edge';
-
-import fs from 'fs';
-import path from 'path';
+export const runtime = 'edge'
 import { getUserCompanyContext } from '../../../lib/supabase/server';
 
-export default async function handler(req, res) {
+export default async function handler(req) {
   if (req.method !== 'GET') {
-    return res.status(405).json({ error: 'Method not allowed' });
+    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
+      status: 405,
+      headers: { 'Content-Type': 'application/json', 'Allow': 'GET' }
+    });
   }
 
   try {
     // Get user context from middleware headers (if authenticated)
     // For now, we'll allow public access but filter based on company if authenticated
-    const userId = req.headers['x-user-id'];
-    const userEmail = req.headers['x-user-email'];
-    const companyId = req.headers['x-company-id'];
-    const userRole = req.headers['x-user-role'];
+    const userId = req.headers.get('x-user-id');
+    const userEmail = req.headers.get('x-user-email');
+    const companyId = req.headers.get('x-company-id');
+    const userRole = req.headers.get('x-user-role');
 
     console.log('API Auth Context:', { userId, userEmail, companyId, userRole });
 
@@ -25,13 +24,23 @@ export default async function handler(req, res) {
     if (isDevMode) {
       console.log('🔧 DEV MODE: Public access to machine summary');
     }
-    // Read the file directly from filesystem
-    const filePath = path.join(process.cwd(), 'public/data/comprehensive-raw-dex-data.json');
-    const fileContent = fs.readFileSync(filePath, 'utf8');
-    const comprehensiveData = JSON.parse(fileContent);
+
+    // Fetch the static file via HTTP for Edge Runtime compatibility
+    const baseUrl = req.headers.get('origin') || process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
+    const fileUrl = `${baseUrl}/data/comprehensive-raw-dex-data.json`
+    const response = await fetch(fileUrl)
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch comprehensive data')
+    }
+
+    const comprehensiveData = await response.json()
 
     if (!comprehensiveData.data?.machines) {
-      return res.status(404).json({ error: 'No machine data found' });
+      return new Response(JSON.stringify({ error: 'No machine data found' }), {
+        status: 404,
+        headers: { 'Content-Type': 'application/json' }
+      });
     }
 
     // Transform to lightweight summary format
@@ -148,20 +157,26 @@ export default async function handler(req, res) {
       };
     });
 
-    // Set cache headers
-    res.setHeader('Cache-Control', 'public, max-age=300'); // Cache for 5 minutes
-
-    return res.status(200).json({
+    return new Response(JSON.stringify({
       success: true,
       data: machineSummaries,
       totalMachines: Object.keys(machineSummaries).length,
       lastUpdated: comprehensiveData.data.timestamp
+    }), {
+      status: 200,
+      headers: {
+        'Content-Type': 'application/json',
+        'Cache-Control': 'public, max-age=300' // Cache for 5 minutes
+      }
     });
 
   } catch (error) {
     console.error('Machine summary API error:', error);
-    return res.status(500).json({
+    return new Response(JSON.stringify({
       error: 'Failed to load machine summaries: ' + error.message
+    }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
     });
   }
 }
