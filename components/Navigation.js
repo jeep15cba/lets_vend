@@ -16,7 +16,6 @@ export default function Navigation() {
   // Protected navigation items (require credentials)
   const protectedNavigation = [
     { name: 'Devices', href: '/devices' },
-    { name: 'DEX Data', href: '/dex' },
   ]
 
   // Combine navigation based on credential status

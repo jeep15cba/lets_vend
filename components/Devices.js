@@ -1079,7 +1079,7 @@ export default function Devices() {
                       DEX in last 4hrs:
                       <sup className="ml-0.5 text-blue-500">ⓘ</sup>
                     </span>
-                    <div>
+                    <div className="flex items-center gap-2">
                       {device.dex_last_4hrs > 0 ? (
                         <span className="px-2 py-1 bg-green-100 text-green-700 rounded text-sm font-medium">
                           Yes
@@ -1088,6 +1088,14 @@ export default function Devices() {
                         <span className="px-2 py-1 bg-red-500 text-white rounded text-sm font-bold">
                           No
                         </span>
+                      )}
+                      {device.dex_history && device.dex_history.length > 0 && (
+                        <a
+                          href={`/review-dex/${encodeURIComponent(device.case_serial)}`}
+                          className="text-indigo-600 hover:text-indigo-900 text-sm font-medium underline"
+                        >
+                          Review DEX
+                        </a>
                       )}
                     </div>
                     {/* Tooltip showing last 4 DEX timestamps */}
