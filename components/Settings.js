@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase/client'
 import Navigation from './Navigation'
+import axios from 'axios'
 
 export default function Settings() {
   const { user, signOut, isAdmin, isImpersonating, impersonateCompany, stopImpersonating, actualCompanyId, companyId } = useAuth()
@@ -40,6 +41,11 @@ export default function Settings() {
 
   // Mobile menu state
   const [menuOpen, setMenuOpen] = useState(false)
+
+  // Subscription state
+  const [subscription, setSubscription] = useState(null)
+  const [tiers, setTiers] = useState([])
+  const [loadingSubscription, setLoadingSubscription] = useState(false)
 
   useEffect(() => {
     // Load user profile data from API to get complete information including company name
@@ -354,12 +360,55 @@ export default function Settings() {
     }
   }, [activeTab, isAdmin])
 
+  // Load subscription data when Subscription tab is active
+  useEffect(() => {
+    if (activeTab === 'subscription') {
+      loadSubscriptionData()
+    }
+  }, [activeTab])
+
+  const loadSubscriptionData = async () => {
+    try {
+      setLoadingSubscription(true)
+      const [subResponse, tiersResponse] = await Promise.all([
+        axios.get('/api/subscription'),
+        axios.get('/api/subscription/tiers')
+      ])
+
+      if (subResponse.data.success) {
+        setSubscription(subResponse.data.subscription)
+      }
+
+      if (tiersResponse.data.success) {
+        setTiers(tiersResponse.data.tiers)
+      }
+    } catch (err) {
+      console.error('Error fetching subscription data:', err)
+      setMessage({ type: 'error', text: err.message })
+    } finally {
+      setLoadingSubscription(false)
+    }
+  }
+
   const tabs = [
     { id: 'profile', name: 'Profile', icon: 'user' },
+    { id: 'subscription', name: 'Subscription', icon: 'credit-card' },
     { id: 'dex', name: 'DEX Integration', icon: 'server' },
     { id: 'security', name: 'Security', icon: 'shield' },
     ...(isAdmin ? [{ id: 'admin', name: 'Admin', icon: 'admin' }] : [])
   ]
+
+  const getStatusBadge = (status) => {
+    const badges = {
+      trial: 'bg-blue-100 text-blue-800',
+      active: 'bg-green-100 text-green-800',
+      past_due: 'bg-yellow-100 text-yellow-800',
+      canceled: 'bg-red-100 text-red-800',
+      suspended: 'bg-gray-100 text-gray-800',
+      promotional: 'bg-purple-100 text-purple-800'
+    }
+    return badges[status] || 'bg-gray-100 text-gray-800'
+  }
 
 
   return (
@@ -797,6 +846,187 @@ export default function Settings() {
               </div>
             )}
 
+            {activeTab === 'subscription' && (
+              <div>
+                {loadingSubscription && (
+                  <div className="text-center py-12">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
+                    <p className="mt-4 text-gray-600">Loading subscription details...</p>
+                  </div>
+                )}
+
+                {!loadingSubscription && subscription && (
+                  <>
+                    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+                      <div className="flex items-center justify-between mb-6">
+                        <h2 className="text-xl font-semibold text-gray-900">Current Subscription</h2>
+                        <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusBadge(subscription.subscription_status)}`}>
+                          {subscription.subscription_status?.charAt(0).toUpperCase() + subscription.subscription_status?.slice(1)}
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                          <p className="text-sm text-gray-500 mb-1">Current Plan</p>
+                          <p className="text-2xl font-bold text-indigo-600">{subscription.tier_name || 'No tier selected'}</p>
+                          {subscription.is_promotional && (
+                            <span className="inline-block mt-2 px-2 py-1 bg-purple-100 text-purple-800 text-xs font-medium rounded">
+                              Promotional Account
+                            </span>
+                          )}
+                        </div>
+
+                        <div>
+                          <p className="text-sm text-gray-500 mb-1">Machines</p>
+                          <p className="text-2xl font-bold text-gray-900">
+                            {subscription.machine_count} / {subscription.is_promotional ? '∞' : subscription.machine_limit}
+                          </p>
+                          {subscription.is_at_limit && !subscription.is_promotional && (
+                            <p className="text-sm text-red-600 mt-1">⚠️ Machine limit reached</p>
+                          )}
+                        </div>
+
+                        <div>
+                          <p className="text-sm text-gray-500 mb-1">Billing Cycle</p>
+                          <p className="text-lg font-medium text-gray-900 capitalize">{subscription.billing_cycle || 'N/A'}</p>
+                        </div>
+
+                        <div>
+                          <p className="text-sm text-gray-500 mb-1">Current Price</p>
+                          <p className="text-lg font-medium text-gray-900">
+                            {subscription.current_price === 0 ? 'Free' : `$${subscription.current_price}/${subscription.billing_cycle === 'yearly' ? 'year' : 'month'}`}
+                          </p>
+                        </div>
+                      </div>
+
+                      {subscription.promotional_notes && (
+                        <div className="mt-4 p-3 bg-purple-50 border border-purple-200 rounded">
+                          <p className="text-sm text-purple-800">
+                            <strong>Promotional Note:</strong> {subscription.promotional_notes}
+                          </p>
+                        </div>
+                      )}
+
+                      {subscription.tier_features && subscription.tier_features.length > 0 && (
+                        <div className="mt-6">
+                          <p className="text-sm font-medium text-gray-700 mb-2">Current Features:</p>
+                          <ul className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                            {subscription.tier_features.map((feature, idx) => (
+                              <li key={idx} className="flex items-start">
+                                <svg className="h-5 w-5 text-green-500 mt-0.5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                </svg>
+                                <span className="text-sm text-gray-700">{feature}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+
+                    {!subscription.is_promotional && tiers.length > 0 && (
+                      <div>
+                        <h2 className="text-xl font-semibold text-gray-900 mb-4">Available Plans</h2>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                          {tiers.map((tier) => {
+                            const isCurrentTier = tier.name === subscription.tier_name
+                            const isBetterTier = tier.machine_limit > subscription.machine_limit
+
+                            return (
+                              <div
+                                key={tier.id}
+                                className={`bg-white rounded-lg shadow-sm border-2 p-6 ${
+                                  isCurrentTier
+                                    ? 'border-indigo-500 ring-2 ring-indigo-500'
+                                    : 'border-gray-200 hover:border-indigo-300'
+                                }`}
+                              >
+                                {isCurrentTier && (
+                                  <span className="inline-block mb-3 px-2 py-1 bg-indigo-100 text-indigo-800 text-xs font-medium rounded">
+                                    Current Plan
+                                  </span>
+                                )}
+
+                                <h3 className="text-lg font-bold text-gray-900 mb-2">{tier.name}</h3>
+                                <p className="text-sm text-gray-600 mb-4">{tier.description}</p>
+
+                                <div className="mb-4">
+                                  <p className="text-3xl font-bold text-gray-900">
+                                    ${tier.price_monthly}
+                                    <span className="text-base font-normal text-gray-500">/mo</span>
+                                  </p>
+                                  {tier.price_yearly > 0 && (
+                                    <p className="text-sm text-gray-500">
+                                      or ${tier.price_yearly}/year (save ${(tier.price_monthly * 12 - tier.price_yearly).toFixed(0)})
+                                    </p>
+                                  )}
+                                </div>
+
+                                <div className="mb-4">
+                                  <p className="text-sm font-medium text-gray-700">
+                                    Up to {tier.machine_limit === 999999 ? 'Unlimited' : tier.machine_limit} machines
+                                  </p>
+                                </div>
+
+                                {tier.features && tier.features.length > 0 && (
+                                  <ul className="space-y-2 mb-6">
+                                    {tier.features.slice(0, 4).map((feature, idx) => (
+                                      <li key={idx} className="flex items-start text-sm text-gray-600">
+                                        <svg className="h-4 w-4 text-green-500 mt-0.5 mr-2 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                        </svg>
+                                        {feature}
+                                      </li>
+                                    ))}
+                                  </ul>
+                                )}
+
+                                {!isCurrentTier && isBetterTier && (
+                                  <button
+                                    onClick={() => setMessage({ type: 'info', text: 'Contact support to upgrade your plan' })}
+                                    className="w-full bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 transition-colors font-medium"
+                                  >
+                                    Upgrade
+                                  </button>
+                                )}
+
+                                {!isCurrentTier && !isBetterTier && (
+                                  <button
+                                    disabled
+                                    className="w-full bg-gray-200 text-gray-500 px-4 py-2 rounded-md cursor-not-allowed font-medium"
+                                  >
+                                    Lower Tier
+                                  </button>
+                                )}
+
+                                {isCurrentTier && (
+                                  <button
+                                    disabled
+                                    className="w-full bg-gray-100 text-gray-500 px-4 py-2 rounded-md cursor-not-allowed font-medium"
+                                  >
+                                    Current Plan
+                                  </button>
+                                )}
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {subscription.is_promotional && (
+                      <div className="bg-purple-50 border border-purple-200 rounded-lg p-6">
+                        <h3 className="text-lg font-medium text-purple-900 mb-2">Promotional Account</h3>
+                        <p className="text-purple-800">
+                          You have unlimited access to all features. Plan upgrades are not available for promotional accounts.
+                        </p>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
+
             {activeTab === 'admin' && isAdmin && (
               <div className="bg-white shadow rounded-lg">
                 <div className="px-4 py-5 sm:p-6">
@@ -901,6 +1131,11 @@ function TabIcon({ icon, className }) {
     user: (
       <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+      </svg>
+    ),
+    'credit-card': (
+      <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
       </svg>
     ),
     server: (
