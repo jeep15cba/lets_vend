@@ -135,6 +135,28 @@ Deno.serve(async (req) => {
 
     console.log(`✅ Cron completed: ${successCount}/${results.length} companies processed, ${totalRecords} records collected`)
 
+    // Update 4-hour DEX flags after collection
+    try {
+      console.log('🕐 Updating 4-hour DEX flags...')
+      const flagsResponse = await fetch(`${siteUrl}/api/dex/update-4hr-flags`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Service-Key': serviceApiKey
+        }
+      })
+
+      if (flagsResponse.ok) {
+        const flagsResult = await flagsResponse.json()
+        console.log(`✅ Updated 4-hour flags: ${flagsResult.hasRecentDex} active, ${flagsResult.noRecentDex} inactive`)
+      } else {
+        console.log(`⚠️ Failed to update 4-hour flags: ${flagsResponse.status}`)
+      }
+    } catch (error) {
+      console.error('⚠️ Error updating 4-hour flags:', error.message)
+      // Don't fail the whole job if flag update fails
+    }
+
     return new Response(
       JSON.stringify({
         success: true,
