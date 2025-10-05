@@ -14,7 +14,7 @@ export default async function handler(req) {
   try {
     // Parse batching parameters from query string
     const url = new URL(req.url)
-    const batchLimit = parseInt(url.searchParams.get('limit') || '25', 10)
+    const batchLimit = parseInt(url.searchParams.get('limit') || '15', 10)
     const batchOffset = parseInt(url.searchParams.get('offset') || '0', 10)
 
     console.log(`📦 Batch processing: limit=${batchLimit}, offset=${batchOffset}`)

@@ -65,7 +65,7 @@ Deno.serve(async (req) => {
         let totalRecordsCollected = 0
         let offset = 0
         let hasMore = true
-        const batchLimit = 25
+        const batchLimit = 15
         const companyErrors = []
 
         // Batch processing loop - continue until all records are processed
