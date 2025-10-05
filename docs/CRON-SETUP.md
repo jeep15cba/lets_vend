@@ -2,6 +2,8 @@
 
 This document explains how to set up automated DEX data collection that runs independently of your local server.
 
+**Status**: ✅ Deployed and running every 20 minutes
+
 ## Problem
 
 The current scheduler (`/api/dex/scheduler`) requires:
