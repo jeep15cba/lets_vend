@@ -1,9 +1,10 @@
 import { getUserCompanyContext, createClient } from '../../../lib/supabase/server'
+import { createServiceClient, validateServiceAuth } from '../../../lib/supabase/service'
 export const runtime = 'edge'
 import { parseDexContent, formatDexSummary } from '../../../lib/dex-parser'
 import { parseDexToKeyValue, formatKeyValuePairs } from '../../../lib/dex-key-value-parser'
 import { parseHybridDex, getDeviceCardData } from '../../../lib/dex-hybrid-parser'
-import { getUserDexCredentials } from '../../../lib/user-credentials'
+import { getUserDexCredentials, getDexCredentialsByCompanyId } from '../../../lib/user-credentials'
 
 export default async function handler(req) {
   if (req.method !== 'POST') {
@@ -11,11 +12,47 @@ export default async function handler(req) {
   }
 
   try {
-    // Get user context from Supabase auth
-    const { user, companyId, error: authError } = await getUserCompanyContext(req)
+    let companyId
+    let supabase
+    let isServiceAuth = false
 
-    if (authError || !user) {
-      return new Response(JSON.stringify({ error: 'Authentication required' }), { status: 401, headers: { 'Content-Type': 'application/json' } })
+    // Check for service-level authentication first
+    const serviceKey = req.headers.get('X-Service-Key')
+    const companyIdHeader = req.headers.get('X-Company-ID')
+
+    if (serviceKey) {
+      console.log('🔐 Service-level authentication detected')
+
+      const serviceAuth = validateServiceAuth(req)
+
+      if (!serviceAuth.valid) {
+        return new Response(JSON.stringify({ error: serviceAuth.error }), {
+          status: 401,
+          headers: { 'Content-Type': 'application/json' }
+        })
+      }
+
+      companyId = serviceAuth.companyId
+      supabase = createServiceClient()
+      isServiceAuth = true
+      console.log(`✅ Service auth validated for company: ${companyId}`)
+    } else {
+      // Regular user authentication
+      console.log('🔐 User authentication detected')
+
+      const { user, companyId: userCompanyId, error: authError } = await getUserCompanyContext(req)
+
+      if (authError || !user) {
+        return new Response(JSON.stringify({ error: 'Authentication required' }), {
+          status: 401,
+          headers: { 'Content-Type': 'application/json' }
+        })
+      }
+
+      companyId = userCompanyId
+      const clientResult = createClient(req)
+      supabase = clientResult.supabase
+      console.log(`✅ User auth validated for company: ${companyId}`)
     }
 
     console.log(`🔧 Starting bulk DEX data collection...`)
@@ -42,9 +79,22 @@ export default async function handler(req) {
     const allCookies = authData.cookies
     console.log('Authentication successful!')
 
-    // Get siteUrl from user credentials
-    const credentials = await getUserDexCredentials(req)
+    // Get siteUrl from credentials (service or user based on auth type)
+    const credentials = isServiceAuth
+      ? await getDexCredentialsByCompanyId(companyId)
+      : await getUserDexCredentials(req)
+
     const siteUrl = credentials.siteUrl || 'https://dashboard.cantaloupe.online'
+
+    if (!credentials.isConfigured) {
+      return new Response(JSON.stringify({
+        error: credentials.error || 'No DEX credentials configured',
+        success: false
+      }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' }
+      })
+    }
 
     // Step 2: Extract CSRF token
     let csrfToken = null
@@ -195,8 +245,7 @@ export default async function handler(req) {
       }), { status: 200, headers: { 'Content-Type': 'application/json' } })
     }
 
-    // Step 4: Set up database connection with RLS and get existing DEX IDs
-    const { supabase } = createClient(req)
+    // Step 4: Supabase client already set up based on auth type (see above)
 
     // Get all machines for this company
     const { data: machines, error: machinesError } = await supabase
