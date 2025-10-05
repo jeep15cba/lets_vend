@@ -45,9 +45,32 @@ export default function ReviewDexPage() {
   }, [caseSerial, user]);
 
   // Format date with user's timezone
+  // Cantaloupe timestamps come as "YYYY-MM-DD HH:MM:SS" or "YYYY-MM-DDTHH:MM:SS" in GMT/UTC
   const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
-    const date = new Date(dateString);
+
+    let date;
+
+    // If already has 'Z' suffix, it's explicitly UTC
+    if (dateString.endsWith('Z')) {
+      date = new Date(dateString);
+    }
+    // If it has a timezone offset like +10:00, use as-is
+    else if (dateString.includes('+') || (dateString.includes('-') && dateString.lastIndexOf('-') > 10)) {
+      date = new Date(dateString);
+    }
+    // Otherwise, treat as UTC by adding 'Z' suffix
+    else {
+      // Convert "YYYY-MM-DD HH:MM:SS" to ISO format with Z
+      let isoString = dateString;
+      if (dateString.includes(' ')) {
+        isoString = dateString.replace(' ', 'T') + 'Z';
+      } else if (!dateString.endsWith('Z')) {
+        isoString = dateString + 'Z';
+      }
+      date = new Date(isoString);
+    }
+
     return date.toLocaleString('en-AU', {
       timeZone: timezone || 'Australia/Brisbane',
       year: 'numeric',
