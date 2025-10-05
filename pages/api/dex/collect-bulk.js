@@ -22,12 +22,15 @@ export default async function handler(req) {
 
     // Step 1: Authenticate with Cantaloupe
     console.log('Authenticating with DEX platform...')
-    const baseUrl = req.headers.origin || process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_LOCAL_URL || 'http://localhost:3000'
+    const baseUrl = req.headers.get('origin') || process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_LOCAL_URL || 'http://localhost:3000'
+    const cookieHeader = req.headers.get('cookie') || ''
+    console.log('Forwarding Supabase auth cookies to /api/cantaloupe/auth:', cookieHeader ? 'Present' : 'Missing')
+
     const authResponse = await fetch(`${baseUrl}/api/cantaloupe/auth`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Cookie': req.headers.cookie || ''
+        'Cookie': cookieHeader
       }
     })
 
@@ -808,9 +811,12 @@ export default async function handler(req) {
 
   } catch (error) {
     console.error('Error collecting bulk DEX data:', error)
+    console.error('Error stack:', error.stack)
     return new Response(JSON.stringify({
       success: false,
-      error: error.message || 'Failed to collect bulk DEX data'
+      error: error.message || 'Failed to collect bulk DEX data',
+      stack: error.stack,
+      details: error.toString()
     }), { status: 500, headers: { 'Content-Type': 'application/json' } })
   }
 }

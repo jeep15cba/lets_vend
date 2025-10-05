@@ -97,13 +97,16 @@ export default async function handler(req) {
       console.log('Starting bulk DEX data collection for all machines...')
 
       // Make internal API call to collect DEX data in bulk
-      const baseUrl = req.headers.origin || process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_LOCAL_URL || 'http://localhost:3000'
+      const baseUrl = req.headers.get('origin') || process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_LOCAL_URL || 'http://localhost:3000'
+      const cookieHeader = req.headers.get('cookie') || ''
+      console.log('Forwarding cookie header:', cookieHeader ? 'Present' : 'Missing')
+
       const collectResponse = await fetch(`${baseUrl}/api/dex/collect-bulk`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          // Forward auth headers for authentication
-          'Cookie': req.headers.cookie || ''
+          // Forward auth cookies for authentication
+          'Cookie': cookieHeader
         }
       })
 

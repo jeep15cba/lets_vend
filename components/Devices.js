@@ -63,6 +63,17 @@ const formatAESTDate = (dateString, includeTime = true) => {
   return date.toLocaleString('en-AU', options);
 };
 
+// Helper function to find the dexId from dex_history that matches the latest_dex_data timestamp
+const getDexIdFromHistory = (device) => {
+  if (!device.latest_dex_data || !device.dex_history || device.dex_history.length === 0) {
+    return null;
+  }
+
+  // Find the entry in dex_history that matches the latest_dex_data timestamp
+  const latestEntry = device.dex_history.find(entry => entry.created === device.latest_dex_data);
+  return latestEntry?.dexId || device.dex_history[0]?.dexId || null;
+};
+
 export default function Devices() {
   const { user, signOut, hasCredentials, credentialsLoading } = useAuth();
   // devicesData removed - now using savedDevices from Supabase directly
@@ -267,7 +278,9 @@ export default function Devices() {
       }
     } catch (error) {
       console.error('❌ Bulk DEX collection error:', error);
-      setError('Failed to run bulk DEX collection: ' + (error.response?.data?.error || error.message));
+      console.error('❌ Error response data:', error.response?.data);
+      const errorDetails = error.response?.data?.stack || error.response?.data?.details || error.response?.data?.error || error.message;
+      setError('Failed to run bulk DEX collection: ' + errorDetails);
     } finally {
       setLoading(false);
     }
@@ -501,7 +514,7 @@ export default function Devices() {
               }}
               className="text-left flex items-center gap-1 hover:text-gray-900"
             >
-              Last Seen {sortBy === 'last_seen' && (sortOrder === 'asc' ? '↑' : '↓')}
+              Last Seen<sup className="ml-0.5 text-blue-500">ⓘ</sup> {sortBy === 'last_seen' && (sortOrder === 'asc' ? '↑' : '↓')}
             </button>
             <div>Temperature</div>
             <div>Cash Amt</div>
@@ -563,11 +576,21 @@ export default function Devices() {
                       </div>
                     )}
                   </div>
-                  <div>
-                    <span className="font-medium text-gray-700">Last Seen:</span>
+                  <div className="group relative cursor-help">
+                    <span className="font-medium text-gray-700">
+                      Last Seen:
+                      <sup className="ml-0.5 text-blue-500">ⓘ</sup>
+                    </span>
                     <div className="text-gray-900">
                       {formatAESTDate(device.latest_dex_data)}
                     </div>
+                    {/* Tooltip showing dexId */}
+                    {getDexIdFromHistory(device) && (
+                      <div className="absolute bottom-full left-0 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded whitespace-nowrap opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10 pointer-events-none">
+                        DEX ID: {getDexIdFromHistory(device)}
+                        <div className="absolute top-full left-4 border-4 border-transparent border-t-gray-900"></div>
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -868,13 +891,20 @@ export default function Devices() {
                 </div>
 
                 {/* Last Seen */}
-                <div>
+                <div className="group relative cursor-help">
                   <div className="text-gray-900">
                     {formatAESTDate(device.latest_dex_data, false)}
                   </div>
                   <div className="text-xs text-gray-500">
                     {device.latest_dex_data ? formatAESTDate(device.latest_dex_data).split(', ')[1] : ''}
                   </div>
+                  {/* Tooltip showing dexId */}
+                  {getDexIdFromHistory(device) && (
+                    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded whitespace-nowrap opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10 pointer-events-none">
+                      DEX ID: {getDexIdFromHistory(device)}
+                      <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Temperature */}
@@ -1022,14 +1052,27 @@ export default function Devices() {
               {/* DEX Status Row - Second row for desktop, additional info for mobile */}
               <div className="mt-3 pt-3 border-t border-gray-100">
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-xs">
-                  <div>
-                    <span className="font-medium text-gray-600">Last DEX Seen:</span>
+                  <div className="group relative cursor-help">
+                    <span className="font-medium text-gray-600">
+                      Last DEX Seen:
+                      <sup className="ml-0.5 text-blue-500">ⓘ</sup>
+                    </span>
                     <div className="text-gray-900">
                       {formatAESTDate(device.latest_dex_data)}
                     </div>
+                    {/* Tooltip showing dexId */}
+                    {getDexIdFromHistory(device) && (
+                      <div className="absolute bottom-full left-0 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded whitespace-nowrap opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10 pointer-events-none">
+                        DEX ID: {getDexIdFromHistory(device)}
+                        <div className="absolute top-full left-4 border-4 border-transparent border-t-gray-900"></div>
+                      </div>
+                    )}
                   </div>
-                  <div>
-                    <span className="font-medium text-gray-600">DEX in last 4hrs:</span>
+                  <div className="group relative cursor-help">
+                    <span className="font-medium text-gray-600">
+                      DEX in last 4hrs:
+                      <sup className="ml-0.5 text-blue-500">ⓘ</sup>
+                    </span>
                     <div>
                       {device.dex_last_4hrs > 0 ? (
                         <span className="px-2 py-1 bg-green-100 text-green-700 rounded text-sm font-medium">
@@ -1041,6 +1084,16 @@ export default function Devices() {
                         </span>
                       )}
                     </div>
+                    {/* Tooltip showing last 4 DEX timestamps */}
+                    {device.dex_history && device.dex_history.length > 0 && (
+                      <div className="absolute bottom-full left-0 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10 pointer-events-none min-w-max">
+                        <div className="font-semibold mb-1">Last 4 DEX Captures:</div>
+                        {device.dex_history.slice(0, 4).map((entry, idx) => (
+                          <div key={idx}>{formatAESTDate(entry.created)}</div>
+                        ))}
+                        <div className="absolute top-full left-4 border-4 border-transparent border-t-gray-900"></div>
+                      </div>
+                    )}
                   </div>
                   {/* Errors column - Desktop only */}
                   <div className="hidden sm:block">
@@ -1423,12 +1476,58 @@ export default function Devices() {
                     </div>
                   </div>
                   <div className="flex-1">
-                    <h3 className="text-xl font-bold text-white mb-2">
-                      {machinesWithErrors.length} Machine{machinesWithErrors.length > 1 ? 's' : ''} Require{machinesWithErrors.length === 1 ? 's' : ''} Attention
-                    </h3>
-                    <p className="text-red-100">
-                      The following machines have unactioned errors that need to be reviewed
-                    </p>
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <h3 className="text-xl font-bold text-white mb-2">
+                          {machinesWithErrors.length} Machine{machinesWithErrors.length > 1 ? 's' : ''} Require{machinesWithErrors.length === 1 ? 's' : ''} Attention
+                        </h3>
+                        <p className="text-red-100">
+                          The following machines have unactioned errors that need to be reviewed
+                        </p>
+                      </div>
+                      <button
+                        onClick={async () => {
+                          if (!confirm('Mark all unactioned errors as actioned?')) return;
+
+                          try {
+                            // Get all unactioned errors from all machines
+                            const errorUpdates = [];
+                            machinesWithErrors.forEach(device => {
+                              device.latest_errors
+                                ?.filter(e => !e.actioned && !e.code.startsWith('UA'))
+                                .forEach(error => {
+                                  errorUpdates.push({
+                                    machineId: device.id,
+                                    errorCode: error.code,
+                                    errorTimestamp: error.timestamp
+                                  });
+                                });
+                            });
+
+                            // Mark all errors as actioned
+                            for (const update of errorUpdates) {
+                              await fetch('/api/machines/action-error', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                  ...update,
+                                  actioned: true
+                                })
+                              });
+                            }
+
+                            // Reload devices to show updated state
+                            await loadSavedDevices();
+                          } catch (err) {
+                            console.error('Error marking all as actioned:', err);
+                            alert('Failed to mark all errors as actioned');
+                          }
+                        }}
+                        className="bg-white text-red-700 hover:bg-red-50 px-4 py-2 rounded-lg text-sm font-semibold transition-colors whitespace-nowrap flex-shrink-0"
+                      >
+                        ✓ Mark All Actioned
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
