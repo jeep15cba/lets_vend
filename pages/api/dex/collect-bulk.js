@@ -507,9 +507,10 @@ export default async function handler(req) {
 
     // Step 7.5: Update machines with DEX metadata even if raw data fetch failed
     // This ensures machines get updated with latest DEX timestamps and info from metadata
+    // IMPORTANT: Only process machines from the current BATCH to avoid subrequest limit
     const machineMetadataUpdates = {}
 
-    for (const newRecord of newDexRecords) {
+    for (const newRecord of batchedRecords) {
       const caseSerial = newRecord.caseSerial
       const machine = newRecord.machine
       const dexMetadata = newRecord.metadata.dexRaw
