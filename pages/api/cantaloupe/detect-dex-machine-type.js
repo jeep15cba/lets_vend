@@ -166,25 +166,67 @@ export default async function handler(request) {
     if (bestMatch.template && bestMatch.template.metrics) {
 
       if (analysis.detectedType === 'bev') {
+        // Find temperature fields in MA5 records - support all temperature patterns
+        const tempRecords = general.MA5?.filter(item =>
+          item['1'] && item['1'].toUpperCase().includes('TEMP')
+        ) || [];
+
+        const detectedTemp = tempRecords.find(item =>
+          item['1'].toUpperCase().includes('DETECTED')
+        )?.[2];
+
+        const desiredTemp = tempRecords.find(item =>
+          item['1'].toUpperCase().includes('DESIRED')
+        )?.[2];
+
+        // Fallback to any TEMP field if specific ones not found
+        const genericTemp = !detectedTemp ? tempRecords.find(item => {
+          const fieldName = item['1'].toUpperCase();
+          return fieldName === 'TEMP' ||
+                 (fieldName.includes('TEMP') && !fieldName.includes('DESIRED') && !fieldName.includes('DETECTED'));
+        })?.[2] : null;
+
         metrics = {
           totalSales: general.VA1 ? parseInt(general.VA1['2'] || 0) : 0,
           totalRevenue: general.VA1 ? parseInt(general.VA1['1'] || 0) : 0,
           cashSales: general.CA3 ? parseInt(general.CA3['2'] || 0) : 0,
           cardSales: products.reduce((sum, p) => sum + parseInt(p.PA2?.['1'] || 0), 0),
           activeProducts: products.filter(p => parseInt(p.PA2?.['1'] || 0) > 0).length,
+          temperatureDesired: desiredTemp,
+          temperatureDetected: detectedTemp || genericTemp,
           cashHandling: analysis.characteristics.hasCA17 ? {
             enabled: true,
             data: general.CA17
           } : { enabled: false }
         };
       } else if (analysis.detectedType === 'food') {
+        // Find temperature fields in MA5 records - support all temperature patterns
+        const tempRecords = general.MA5?.filter(item =>
+          item['1'] && item['1'].toUpperCase().includes('TEMP')
+        ) || [];
+
+        const detectedTemp = tempRecords.find(item =>
+          item['1'].toUpperCase().includes('DETECTED')
+        )?.[2];
+
+        const desiredTemp = tempRecords.find(item =>
+          item['1'].toUpperCase().includes('DESIRED')
+        )?.[2];
+
+        // Fallback to any TEMP field if specific ones not found
+        const genericTemp = !detectedTemp ? tempRecords.find(item => {
+          const fieldName = item['1'].toUpperCase();
+          return fieldName === 'TEMP' ||
+                 (fieldName.includes('TEMP') && !fieldName.includes('DESIRED') && !fieldName.includes('DETECTED'));
+        })?.[2] : null;
+
         metrics = {
           totalSales: products.reduce((sum, p) => sum + parseInt(p.PA2?.['1'] || 0), 0),
           totalRevenue: products.reduce((sum, p) => sum + parseInt(p.PA2?.['2'] || 0), 0),
           cashSales: general.CA2 ? parseInt(general.CA2['2'] || 0) : 0,
           activeProducts: products.filter(p => parseInt(p.PA2?.['1'] || 0) > 0).length,
-          temperatureDesired: general.MA5?.find(item => item['1'] === 'DESIRED TEMPERATURE')?.[2],
-          temperatureDetected: general.MA5?.find(item => item['1'] === 'DETECTED TEMPERATURE')?.[2],
+          temperatureDesired: desiredTemp,
+          temperatureDetected: detectedTemp || genericTemp,
           cashHandling: analysis.characteristics.hasCA17 ? {
             enabled: true,
             data: general.CA17

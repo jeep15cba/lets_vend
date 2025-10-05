@@ -49,26 +49,36 @@ export default async function handler(req) {
     Object.entries(comprehensiveData.data.machines).forEach(([caseSerial, machine]) => {
       const rawDex = machine.rawDexContent;
 
-      // Extract temperature data
+      // Extract temperature data - support all temperature patterns
       let temperature = null;
       if (rawDex?.structured?.MA5) {
         const tempRecords = rawDex.structured.MA5.filter(record =>
-          record.data && (record.data[0].includes('TEMPERATURE') || record.data[0] === 'TEMP')
+          record.data && record.data[0] && record.data[0].toUpperCase().includes('TEMP')
         );
 
         if (tempRecords.length > 0) {
-          const currentTemp = tempRecords.find(r => r.data[0] === 'DETECTED TEMPERATURE' || r.data[0] === 'TEMP');
-          const targetTemp = tempRecords.find(r => r.data[0] === 'DESIRED TEMPERATURE');
+          // Priority order: DETECTED TEMPERATURE > TEMP (generic) > any other TEMP field
+          const detectedTemp = tempRecords.find(r => r.data[0].toUpperCase().includes('DETECTED'));
+          const desiredTemp = tempRecords.find(r => r.data[0].toUpperCase().includes('DESIRED'));
+
+          // Fallback to generic TEMP field if no DETECTED temperature found
+          const genericTemp = !detectedTemp ? tempRecords.find(r => {
+            const fieldName = r.data[0].toUpperCase();
+            return fieldName === 'TEMP' ||
+                   (fieldName.includes('TEMP') && !fieldName.includes('DESIRED') && !fieldName.includes('DETECTED'));
+          }) : null;
+
+          const currentTemp = detectedTemp || genericTemp;
 
           if (currentTemp) {
             const tempValue = currentTemp.data[1];
             const tempUnit = currentTemp.data[2];
-            const isFood = tempRecords.some(r => r.data[0] === 'DESIRED TEMPERATURE');
+            const isFood = tempRecords.some(r => r.data[0].toUpperCase().includes('DESIRED'));
             const divisor = isFood ? 100 : 10; // Food machines use /100, beverage /10
 
             temperature = {
               current: tempValue ? (parseInt(tempValue.trim()) / divisor).toFixed(1) : null,
-              target: targetTemp ? (parseInt(targetTemp.data[1].trim()) / divisor).toFixed(1) : null,
+              target: desiredTemp ? (parseInt(desiredTemp.data[1].trim()) / divisor).toFixed(1) : null,
               unit: tempUnit || 'C'
             };
           }

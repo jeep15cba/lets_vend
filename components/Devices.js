@@ -731,9 +731,18 @@ export default function Devices() {
                             <div>
                               <span className="font-medium text-gray-700">🌡️ Temperature:</span>
                               <div className="text-gray-900">
-                                {convertTemperature(dexDetails[device.case_serial].summary?.temperature)
-                                  ? `${convertTemperature(dexDetails[device.case_serial].summary.temperature)}°C`
-                                  : 'N/A'}
+                                {dexDetails[device.case_serial].summary?.temperature?.current ? (
+                                  <>
+                                    {dexDetails[device.case_serial].summary.temperature.current}°{dexDetails[device.case_serial].summary.temperature.unit || 'C'}
+                                    {dexDetails[device.case_serial].summary.temperature.target && (
+                                      <span className="text-gray-400 ml-1">({dexDetails[device.case_serial].summary.temperature.target}°{dexDetails[device.case_serial].summary.temperature.unit || 'C'})</span>
+                                    )}
+                                  </>
+                                ) : (
+                                  convertTemperature(dexDetails[device.case_serial].summary?.temperature)
+                                    ? `${convertTemperature(dexDetails[device.case_serial].summary.temperature)}°C`
+                                    : 'N/A'
+                                )}
                               </div>
                             </div>
                           </div>
@@ -916,7 +925,16 @@ export default function Devices() {
                 {/* Temperature */}
                 <div>
                   <div className="text-gray-900">
-                    {convertTemperature(device.temperature) ? `${convertTemperature(device.temperature)}°C` : 'N/A'}
+                    {device.temperature?.current ? (
+                      <>
+                        {device.temperature.current}°{device.temperature.unit || 'C'}
+                        {device.temperature.target && (
+                          <span className="text-gray-400 ml-1 text-sm">({device.temperature.target}°{device.temperature.unit || 'C'})</span>
+                        )}
+                      </>
+                    ) : (
+                      convertTemperature(device.temperature) ? `${convertTemperature(device.temperature)}°C` : 'N/A'
+                    )}
                   </div>
                   <div className="text-xs text-gray-500">
                     {device.firmware_version || 'Unknown'}
