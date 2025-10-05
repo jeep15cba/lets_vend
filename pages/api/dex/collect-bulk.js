@@ -319,8 +319,8 @@ export default async function handler(req) {
         continue // Skip invalid records or machines not in our company
       }
 
-      // Only process if this DEX ID is new (using rowId for uniqueness check)
-      if (!existingDexIds.has(String(rowId))) {
+      // Only process if this DEX ID is new (using actualDexId for uniqueness check)
+      if (!existingDexIds.has(String(actualDexId))) {
         newDexRecords.push({
           dexId: String(actualDexId), // Use the actual dexRaw.id for API calls
           rowId: String(rowId), // Keep rowId for database uniqueness
