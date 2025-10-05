@@ -21,6 +21,10 @@ export const AuthProvider = ({ children }) => {
   // Removed credentialsLoading - no longer needed with metadata approach
   const router = useRouter()
 
+  // Impersonation state
+  const [impersonatedCompanyId, setImpersonatedCompanyId] = useState(null)
+  const [isImpersonating, setIsImpersonating] = useState(false)
+
   // Helper function to extract hasCredentials from user metadata
   const getHasCredentialsFromUser = (userObj) => {
     return !!(userObj?.user_metadata?.hasValidCredentials)
@@ -133,6 +137,20 @@ export const AuthProvider = ({ children }) => {
     try {
       const { error } = await supabase.auth.signOut()
       if (error) throw error
+
+      // Clear user state
+      setUser(null)
+      setCompanyId(null)
+      setRole(null)
+      setHasCredentials(false)
+
+      // Clear impersonation state
+      setImpersonatedCompanyId(null)
+      setIsImpersonating(false)
+
+      // Redirect to login page
+      router.push('/login')
+
       return { error: null }
     } catch (error) {
       console.error('Error signing out:', error.message)
@@ -168,9 +186,30 @@ export const AuthProvider = ({ children }) => {
     }
   }
 
+  // Impersonation functions (admin only)
+  const impersonateCompany = (targetCompanyId) => {
+    if (role !== 'admin') {
+      console.error('Only admins can impersonate')
+      return
+    }
+    console.log(`🔧 Admin impersonating company: ${targetCompanyId}`)
+    setImpersonatedCompanyId(targetCompanyId)
+    setIsImpersonating(true)
+  }
+
+  const stopImpersonating = () => {
+    console.log('🔧 Stopping impersonation')
+    setImpersonatedCompanyId(null)
+    setIsImpersonating(false)
+  }
+
+  // Return the impersonated company ID if impersonating, otherwise return actual company ID
+  const effectiveCompanyId = isImpersonating ? impersonatedCompanyId : companyId
+
   const value = {
     user,
-    companyId,
+    companyId: effectiveCompanyId, // This will be the impersonated company if impersonating
+    actualCompanyId: companyId, // Always the admin's actual company ID
     role,
     loading,
     signIn,
@@ -180,10 +219,15 @@ export const AuthProvider = ({ children }) => {
     updatePassword,
     isAdmin: role === 'admin',
     isAuthenticated: !!user,
-    hasCompanyAccess: !!companyId,
+    hasCompanyAccess: !!effectiveCompanyId,
     isDevMode: false,
     hasCredentials,
     checkCredentialsStatus, // Kept for backward compatibility - now reads from user metadata
+    timezone: user?.user_metadata?.timezone || 'Australia/Brisbane', // User's preferred timezone
+    // Impersonation
+    isImpersonating,
+    impersonateCompany,
+    stopImpersonating,
   }
 
   return (

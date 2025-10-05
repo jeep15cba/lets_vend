@@ -2,9 +2,16 @@ import { getUserCompanyContext, createClient } from '../../../lib/supabase/serve
 export const runtime = 'edge'
 
 export default async function handler(req) {
-  if (req.method !== 'GET') {
+  if (req.method === 'GET') {
+    return handleGet(req)
+  } else if (req.method === 'PUT') {
+    return handlePut(req)
+  } else {
     return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405, headers: { 'Content-Type': 'application/json' } })
   }
+}
+
+async function handleGet(req) {
 
   try {
     const { user, companyId, role, error: authError } = await getUserCompanyContext(req)
@@ -66,7 +73,8 @@ export default async function handler(req) {
           name: user.user_metadata?.name,
           company_id: companyId,
           company_name: companyName,
-          role: role
+          role: role,
+          timezone: user.user_metadata?.timezone
         }
       },
       companyId,
@@ -76,6 +84,62 @@ export default async function handler(req) {
 
   } catch (error) {
     console.error('Profile API error:', error)
+    return new Response(JSON.stringify({ error: 'Internal server error' }), { status: 500, headers: { 'Content-Type': 'application/json' } })
+  }
+}
+
+async function handlePut(req) {
+  try {
+    const { user, error: authError } = await getUserCompanyContext(req)
+
+    if (!user || authError) {
+      return new Response(JSON.stringify({ error: 'Authentication required' }), { status: 401, headers: { 'Content-Type': 'application/json' } })
+    }
+
+    // Parse request body
+    const body = await req.json()
+    const { firstName, lastName, timezone } = body
+
+    console.log('🔧 Profile Update API - User ID:', user.id)
+    console.log('🔧 Profile Update API - Data:', { firstName, lastName, timezone })
+
+    // Update user metadata in Supabase Auth
+    const { supabase } = createClient(req)
+
+    const updateData = {}
+
+    // Build the metadata update object
+    if (firstName !== undefined || lastName !== undefined) {
+      const name = [firstName, lastName].filter(Boolean).join(' ')
+      if (name) {
+        updateData.name = name
+      }
+    }
+
+    if (timezone !== undefined) {
+      updateData.timezone = timezone
+    }
+
+    console.log('🔧 Profile Update API - Updating user metadata:', updateData)
+
+    const { data, error } = await supabase.auth.updateUser({
+      data: updateData
+    })
+
+    if (error) {
+      console.error('🔧 Profile Update API - Error:', error)
+      return new Response(JSON.stringify({ error: error.message }), { status: 500, headers: { 'Content-Type': 'application/json' } })
+    }
+
+    console.log('🔧 Profile Update API - Success:', data.user.user_metadata)
+
+    return new Response(JSON.stringify({
+      success: true,
+      user: data.user
+    }), { status: 200, headers: { 'Content-Type': 'application/json' } })
+
+  } catch (error) {
+    console.error('Profile Update API error:', error)
     return new Response(JSON.stringify({ error: 'Internal server error' }), { status: 500, headers: { 'Content-Type': 'application/json' } })
   }
 }

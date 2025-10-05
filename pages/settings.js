@@ -8,12 +8,11 @@ export default function SettingsPage() {
   const { user, loading } = useAuth()
   const router = useRouter()
 
-  // TEMPORARY: Disable redirect to prevent loops
-  // useEffect(() => {
-  //   if (!user && !loading) {
-  //     router.push('/login')
-  //   }
-  // }, [user, loading, router])
+  useEffect(() => {
+    if (!user && !loading) {
+      router.push('/login')
+    }
+  }, [user, loading, router])
 
   if (loading) {
     return (
@@ -26,10 +25,9 @@ export default function SettingsPage() {
     )
   }
 
-  // TEMPORARY: Always show settings component (disable user check)
-  // if (!user) {
-  //   return null // Will redirect via useEffect
-  // }
+  if (!user) {
+    return null // Will redirect via useEffect
+  }
 
   return (
     <>

@@ -15,10 +15,10 @@ const convertTemperature = (rawTemp) => {
   return temp > 50 ? (temp / 100).toFixed(1) : temp.toFixed(1);
 };
 
-// Helper function to format dates in AEST timezone
+// Helper function to format dates in user's timezone
 // Cantaloupe timestamps come as "YYYY-MM-DD HH:MM:SS" or "YYYY-MM-DDTHH:MM:SS" in GMT/UTC
-// We need to parse them as GMT and convert to AEST for display
-const formatAESTDate = (dateString, includeTime = true) => {
+// We need to parse them as GMT and convert to user's timezone for display
+const formatAESTDate = (dateString, includeTime = true, userTimezone = 'Australia/Brisbane') => {
   if (!dateString) return 'Never';
 
   // Parse the date string as UTC/GMT
@@ -46,9 +46,9 @@ const formatAESTDate = (dateString, includeTime = true) => {
     date = new Date(isoString);
   }
 
-  // Format in Australian locale with Brisbane timezone (AEST/AEDT)
+  // Format in Australian locale with user's selected timezone
   const options = {
-    timeZone: 'Australia/Brisbane',
+    timeZone: userTimezone,
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
@@ -75,7 +75,13 @@ const getDexIdFromHistory = (device) => {
 };
 
 export default function Devices() {
-  const { user, signOut, hasCredentials, credentialsLoading } = useAuth();
+  const { user, signOut, hasCredentials, credentialsLoading, timezone } = useAuth();
+
+  // Format dates with user's timezone
+  const formatDate = (dateString, includeTime = true) => {
+    return formatAESTDate(dateString, includeTime, timezone || 'Australia/Brisbane');
+  };
+
   // devicesData removed - now using savedDevices from Supabase directly
   const [loading, setLoading] = useState(false);
   const [capturing, setCapturing] = useState(false);
@@ -582,7 +588,7 @@ export default function Devices() {
                       <sup className="ml-0.5 text-blue-500">ⓘ</sup>
                     </span>
                     <div className="text-gray-900">
-                      {formatAESTDate(device.latest_dex_data)}
+                      {formatDate(device.latest_dex_data)}
                     </div>
                     {/* Tooltip showing dexId */}
                     {getDexIdFromHistory(device) && (
@@ -651,8 +657,8 @@ export default function Devices() {
                   </div>
                 )}
 
-                {/* DEX Information */}
-                <div className="mt-3 pt-3 border-t border-gray-200">
+                {/* DEX Information - Desktop Only */}
+                <div className="hidden sm:block mt-3 pt-3 border-t border-gray-200">
                   <div className="grid grid-cols-2 gap-3 text-xs">
                     <div>
                       <span className="font-medium text-gray-700">📊 DEX Records:</span>
@@ -665,7 +671,7 @@ export default function Devices() {
                       <span className="font-medium text-gray-700">🕒 Last DEX:</span>
                       <div className="text-gray-900">
                         {device.latest_dex_data
-                          ? formatAESTDate(device.latest_dex_data, false)
+                          ? formatDate(device.latest_dex_data, false)
                           : 'Never'
                         }
                       </div>
@@ -766,7 +772,7 @@ export default function Devices() {
                           )}
 
                           <div className="text-xs text-gray-500 mt-2">
-                            Last Updated: {formatAESTDate(dexDetails[device.case_serial].lastUpdate)}
+                            Last Updated: {formatDate(dexDetails[device.case_serial].lastUpdate)}
                           </div>
                         </div>
                       ) : dexDetails[device.case_serial] === null ? (
@@ -893,10 +899,10 @@ export default function Devices() {
                 {/* Last Seen */}
                 <div className="group relative cursor-help">
                   <div className="text-gray-900">
-                    {formatAESTDate(device.latest_dex_data, false)}
+                    {formatDate(device.latest_dex_data, false)}
                   </div>
                   <div className="text-xs text-gray-500">
-                    {device.latest_dex_data ? formatAESTDate(device.latest_dex_data).split(', ')[1] : ''}
+                    {device.latest_dex_data ? formatDate(device.latest_dex_data).split(', ')[1] : ''}
                   </div>
                   {/* Tooltip showing dexId */}
                   {getDexIdFromHistory(device) && (
@@ -1058,7 +1064,7 @@ export default function Devices() {
                       <sup className="ml-0.5 text-blue-500">ⓘ</sup>
                     </span>
                     <div className="text-gray-900">
-                      {formatAESTDate(device.latest_dex_data)}
+                      {formatDate(device.latest_dex_data)}
                     </div>
                     {/* Tooltip showing dexId */}
                     {getDexIdFromHistory(device) && (
@@ -1089,7 +1095,7 @@ export default function Devices() {
                       <div className="absolute bottom-full left-0 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10 pointer-events-none min-w-max">
                         <div className="font-semibold mb-1">Last 4 DEX Captures:</div>
                         {device.dex_history.slice(0, 4).map((entry, idx) => (
-                          <div key={idx}>{formatAESTDate(entry.created)}</div>
+                          <div key={idx}>{formatDate(entry.created)}</div>
                         ))}
                         <div className="absolute top-full left-4 border-4 border-transparent border-t-gray-900"></div>
                       </div>
@@ -1144,7 +1150,7 @@ export default function Devices() {
                                                 </div>
                                               )}
                                               <div className="text-xs text-gray-600 mt-1">
-                                                {formatAESTDate(error.timestamp)}
+                                                {formatDate(error.timestamp)}
                                               </div>
                                             </div>
                                             <label className="flex items-center gap-2 cursor-pointer flex-shrink-0">
@@ -1242,7 +1248,7 @@ export default function Devices() {
                                               </div>
                                             )}
                                             <div className="text-xs text-gray-600 mt-1">
-                                              {formatAESTDate(error.timestamp)}
+                                              {formatDate(error.timestamp)}
                                             </div>
                                           </div>
                                           <label className="flex items-center gap-2 cursor-pointer flex-shrink-0">
@@ -1302,7 +1308,7 @@ export default function Devices() {
   // Format AEST time
   const formatAESTTime = (date) => {
     return date.toLocaleString('en-AU', {
-      timeZone: 'Australia/Sydney',
+      timeZone: timezone || 'Australia/Brisbane',
       hour12: true,
       weekday: 'short',
       year: 'numeric',
@@ -1358,8 +1364,8 @@ export default function Devices() {
                   </div>
                   <div className="text-sm sm:text-lg font-bold text-green-700">
                     {(() => {
-                      // Get current time in AEST
-                      const aestTime = new Date(currentTime.toLocaleString('en-US', { timeZone: 'Australia/Sydney' }));
+                      // Get current time in user's timezone
+                      const aestTime = new Date(currentTime.toLocaleString('en-US', { timeZone: timezone || 'Australia/Brisbane' }));
                       const minutes = aestTime.getMinutes();
                       // Calculate next 20-minute interval (0, 20, 40)
                       const nextInterval = Math.ceil(minutes / 20) * 20;
@@ -1396,22 +1402,13 @@ export default function Devices() {
                 Welcome, {user?.email}
               </div>
 
-              {/* Navigation */}
-              {hasCredentials ? (
-                <a
-                  href="/dashboard"
-                  className="bg-white text-gray-700 hover:text-gray-900 px-4 py-2 rounded-lg border border-gray-200 transition-colors text-sm text-center"
-                >
-                  ← Back to Dashboard
-                </a>
-              ) : (
-                <a
-                  href="/settings"
-                  className="bg-white text-gray-700 hover:text-gray-900 px-4 py-2 rounded-lg border border-gray-200 transition-colors text-sm text-center"
-                >
-                  ← Back to Settings
-                </a>
-              )}
+              {/* Navigation - Mobile Only */}
+              <a
+                href="/settings"
+                className="sm:hidden bg-white text-gray-700 hover:text-gray-900 px-4 py-2 rounded-lg border border-gray-200 transition-colors text-sm text-center"
+              >
+                ← Settings
+              </a>
 
               {/* Action Buttons */}
               <button

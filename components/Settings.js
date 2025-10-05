@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
+import { supabase } from '../lib/supabase/client'
 import Navigation from './Navigation'
 
 export default function Settings() {
-  const { user, signOut } = useAuth()
+  const { user, signOut, isAdmin, isImpersonating, impersonateCompany, stopImpersonating, actualCompanyId, companyId } = useAuth()
   const [activeTab, setActiveTab] = useState('profile')
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState({ type: '', text: '' })
@@ -13,7 +14,8 @@ export default function Settings() {
     firstName: '',
     lastName: '',
     email: '',
-    companyName: ''
+    companyName: '',
+    timezone: 'Australia/Brisbane'
   })
 
   // DEX credentials form state
@@ -23,6 +25,21 @@ export default function Settings() {
     siteUrl: '',
     isConfigured: false
   })
+
+  // Password change form state
+  const [passwordData, setPasswordData] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  })
+
+  const [showPasswordForm, setShowPasswordForm] = useState(false)
+
+  // Admin - User list for impersonation
+  const [users, setUsers] = useState([])
+
+  // Mobile menu state
+  const [menuOpen, setMenuOpen] = useState(false)
 
   useEffect(() => {
     // Load user profile data from API to get complete information including company name
@@ -46,7 +63,8 @@ export default function Settings() {
           firstName: firstName || '',
           lastName: lastNameParts.join(' ') || '',
           email: data.user.email || '',
-          companyName: data.user.user_metadata?.company_name || data.companyName || ''
+          companyName: data.user.user_metadata?.company_name || data.companyName || '',
+          timezone: data.user.user_metadata?.timezone || 'Australia/Brisbane'
         }
 
         setProfileData(profileData)
@@ -178,7 +196,19 @@ export default function Settings() {
       })
 
       if (response.ok) {
+        // Refresh the Supabase session to get updated user metadata
+        const { data: { session }, error: refreshError } = await supabase.auth.refreshSession()
+
+        if (refreshError) {
+          console.error('Error refreshing session:', refreshError)
+        } else {
+          console.log('🔧 Session refreshed, new timezone:', session?.user?.user_metadata?.timezone)
+        }
+
         setMessage({ type: 'success', text: 'Profile updated successfully!' })
+
+        // Reload profile data to reflect changes in the UI
+        await loadProfileData()
       } else {
         throw new Error('Failed to update profile')
       }
@@ -253,10 +283,82 @@ export default function Settings() {
     }
   }
 
+  const handlePasswordChange = async (e) => {
+    e.preventDefault()
+    setLoading(true)
+    setMessage({ type: '', text: '' })
+
+    // Validate passwords match
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      setMessage({ type: 'error', text: 'New passwords do not match' })
+      setLoading(false)
+      return
+    }
+
+    // Validate password strength
+    if (passwordData.newPassword.length < 8) {
+      setMessage({ type: 'error', text: 'Password must be at least 8 characters' })
+      setLoading(false)
+      return
+    }
+
+    try {
+      const response = await fetch('/api/user/change-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          currentPassword: passwordData.currentPassword,
+          newPassword: passwordData.newPassword
+        }),
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        setMessage({ type: 'success', text: 'Password changed successfully!' })
+        setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' })
+        setShowPasswordForm(false)
+      } else {
+        throw new Error(data.error || 'Failed to change password')
+      }
+    } catch (error) {
+      setMessage({ type: 'error', text: error.message })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const loadUsers = async () => {
+    if (!isAdmin) return
+
+    try {
+      const response = await fetch('/api/admin/list-users', {
+        credentials: 'include'
+      })
+      if (response.ok) {
+        const data = await response.json()
+        setUsers(data.users || [])
+      }
+    } catch (error) {
+      console.error('Error loading users:', error)
+    }
+  }
+
+  // Load users when Admin tab is active
+  useEffect(() => {
+    if (activeTab === 'admin' && isAdmin) {
+      loadUsers()
+    }
+  }, [activeTab, isAdmin])
+
   const tabs = [
     { id: 'profile', name: 'Profile', icon: 'user' },
     { id: 'dex', name: 'DEX Integration', icon: 'server' },
-    { id: 'security', name: 'Security', icon: 'shield' }
+    { id: 'security', name: 'Security', icon: 'shield' },
+    ...(isAdmin ? [{ id: 'admin', name: 'Admin', icon: 'admin' }] : [])
   ]
 
 
@@ -266,7 +368,47 @@ export default function Settings() {
 
       <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         <div className="px-4 py-6 sm:px-0">
-          <div className="border-b border-gray-200">
+          {/* Mobile Header with Hamburger Menu */}
+          <div className="sm:hidden mb-4">
+            <div className="flex items-center justify-between bg-white rounded-lg shadow p-4">
+              <h1 className="text-lg font-semibold text-gray-900">Settings</h1>
+              <button
+                onClick={() => setMenuOpen(!menuOpen)}
+                className="p-2 rounded-md text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+              >
+                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  {menuOpen ? (
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  ) : (
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                  )}
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          {/* Mobile Dropdown Menu */}
+          {menuOpen && (
+            <div className="sm:hidden mb-6 bg-white rounded-lg shadow-lg border border-gray-200 p-4">
+              <div className="flex flex-col space-y-3">
+                <a
+                  href="/devices"
+                  className="bg-white text-gray-700 hover:text-gray-900 px-4 py-2 rounded-lg border border-gray-200 transition-colors text-sm text-center"
+                >
+                  ← Devices
+                </a>
+                <button
+                  onClick={signOut}
+                  className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors text-sm"
+                >
+                  Sign Out
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Desktop Tab Navigation */}
+          <div className="border-b border-gray-200 hidden sm:block">
             <nav className="-mb-px flex space-x-8">
               {tabs.map((tab) => (
                 <button
@@ -285,6 +427,28 @@ export default function Settings() {
             </nav>
           </div>
 
+          {/* Mobile Tab Selector - Card Style */}
+          <div className="sm:hidden mb-4">
+            <div className="grid grid-cols-2 gap-2">
+              {tabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`p-3 rounded-lg border-2 transition-all ${
+                    activeTab === tab.id
+                      ? 'bg-indigo-100 border-indigo-500 text-indigo-700 font-semibold shadow-md'
+                      : 'bg-white border-gray-200 text-gray-700 hover:border-indigo-300 hover:bg-indigo-50'
+                  }`}
+                >
+                  <div className="flex flex-col items-center gap-1">
+                    <TabIcon icon={tab.icon} className="h-5 w-5" />
+                    <span className="text-xs text-center">{tab.name}</span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+
           <div className="mt-6">
             {message.text && (
               <div className={`mb-4 p-4 rounded-md ${
@@ -297,79 +461,126 @@ export default function Settings() {
             )}
 
             {activeTab === 'profile' && (
-              <div className="bg-white shadow rounded-lg">
-                <div className="px-4 py-5 sm:p-6">
-                  <h3 className="text-lg leading-6 font-medium text-gray-900">Profile Information</h3>
-                  <p className="mt-1 text-sm text-gray-500">
-                    Update your personal information and company details.
-                  </p>
+              <div>
+                <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">Profile Information</h3>
 
-                  <form onSubmit={handleProfileSubmit} className="mt-6 space-y-6">
-                    <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-                      <div>
-                        <label htmlFor="firstName" className="block text-sm font-medium text-gray-700">
-                          First name
-                        </label>
-                        <input
-                          type="text"
-                          id="firstName"
-                          value={profileData.firstName}
-                          onChange={(e) => setProfileData({...profileData, firstName: e.target.value})}
-                          className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                        />
-                      </div>
-
-                      <div>
-                        <label htmlFor="lastName" className="block text-sm font-medium text-gray-700">
-                          Last name
-                        </label>
-                        <input
-                          type="text"
-                          id="lastName"
-                          value={profileData.lastName}
-                          onChange={(e) => setProfileData({...profileData, lastName: e.target.value})}
-                          className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                        />
-                      </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* First Name Card */}
+                  <div className="bg-white shadow rounded-lg p-6 border border-gray-200 hover:border-indigo-300 transition-colors">
+                    <div className="flex items-center mb-3">
+                      <svg className="h-5 w-5 text-indigo-600 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                      </svg>
+                      <label htmlFor="firstName" className="block text-sm font-medium text-gray-700">
+                        First Name
+                      </label>
                     </div>
+                    <input
+                      type="text"
+                      id="firstName"
+                      value={profileData.firstName}
+                      onChange={(e) => setProfileData({...profileData, firstName: e.target.value})}
+                      className="block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                      placeholder="Enter first name"
+                    />
+                  </div>
 
-                    <div>
+                  {/* Last Name Card */}
+                  <div className="bg-white shadow rounded-lg p-6 border border-gray-200 hover:border-indigo-300 transition-colors">
+                    <div className="flex items-center mb-3">
+                      <svg className="h-5 w-5 text-indigo-600 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                      </svg>
+                      <label htmlFor="lastName" className="block text-sm font-medium text-gray-700">
+                        Last Name
+                      </label>
+                    </div>
+                    <input
+                      type="text"
+                      id="lastName"
+                      value={profileData.lastName}
+                      onChange={(e) => setProfileData({...profileData, lastName: e.target.value})}
+                      className="block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                      placeholder="Enter last name"
+                    />
+                  </div>
+
+                  {/* Email Card */}
+                  <div className="bg-white shadow rounded-lg p-6 border border-gray-200">
+                    <div className="flex items-center mb-3">
+                      <svg className="h-5 w-5 text-gray-400 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                      </svg>
                       <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                        Email address
+                        Email Address
                       </label>
-                      <input
-                        type="email"
-                        id="email"
-                        value={profileData.email}
-                        disabled
-                        className="mt-1 block w-full border-gray-300 rounded-md shadow-sm bg-gray-50 text-gray-500 sm:text-sm"
-                      />
-                      <p className="mt-1 text-xs text-gray-500">Email cannot be changed here.</p>
                     </div>
+                    <input
+                      type="email"
+                      id="email"
+                      value={profileData.email}
+                      disabled
+                      className="block w-full border-gray-300 rounded-md shadow-sm bg-gray-50 text-gray-500 sm:text-sm cursor-not-allowed"
+                    />
+                    <p className="mt-2 text-xs text-gray-500">Email cannot be changed</p>
+                  </div>
 
-                    <div>
+                  {/* Company Name Card */}
+                  <div className="bg-white shadow rounded-lg p-6 border border-gray-200 hover:border-indigo-300 transition-colors">
+                    <div className="flex items-center mb-3">
+                      <svg className="h-5 w-5 text-indigo-600 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                      </svg>
                       <label htmlFor="companyName" className="block text-sm font-medium text-gray-700">
-                        Company name
+                        Company Name
                       </label>
-                      <input
-                        type="text"
-                        id="companyName"
-                        value={profileData.companyName}
-                        onChange={(e) => setProfileData({...profileData, companyName: e.target.value})}
-                        className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                      />
                     </div>
+                    <input
+                      type="text"
+                      id="companyName"
+                      value={profileData.companyName}
+                      onChange={(e) => setProfileData({...profileData, companyName: e.target.value})}
+                      className="block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                      placeholder="Enter company name"
+                    />
+                  </div>
 
-                    <div className="flex justify-end">
-                      <button
-                        type="submit"
-                        disabled={loading}
-                        className="ml-3 inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
-                      >
-                        {loading ? 'Saving...' : 'Save Profile'}
-                      </button>
+                  {/* Timezone Card */}
+                  <div className="bg-white shadow rounded-lg p-6 border border-gray-200 hover:border-indigo-300 transition-colors sm:col-span-2">
+                    <div className="flex items-center mb-3">
+                      <svg className="h-5 w-5 text-indigo-600 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <label htmlFor="timezone" className="block text-sm font-medium text-gray-700">
+                        Timezone
+                      </label>
                     </div>
-                  </form>
+                    <select
+                      id="timezone"
+                      value={profileData.timezone}
+                      onChange={(e) => setProfileData({...profileData, timezone: e.target.value})}
+                      className="block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                    >
+                      <option value="Australia/Brisbane">Brisbane (AEST - No daylight saving)</option>
+                      <option value="Australia/Sydney">Sydney (AEST/AEDT - With daylight saving)</option>
+                      <option value="Australia/Melbourne">Melbourne (AEST/AEDT - With daylight saving)</option>
+                      <option value="Australia/Adelaide">Adelaide (ACST/ACDT - With daylight saving)</option>
+                      <option value="Australia/Perth">Perth (AWST - No daylight saving)</option>
+                      <option value="Australia/Darwin">Darwin (ACST - No daylight saving)</option>
+                    </select>
+                    <p className="mt-2 text-xs text-gray-500">Choose your timezone for accurate date/time display</p>
+                  </div>
+                </div>
+
+                {/* Save Button */}
+                <div className="mt-6 flex justify-end">
+                  <button
+                    onClick={handleProfileSubmit}
+                    disabled={loading}
+                    className="inline-flex justify-center py-2 px-6 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {loading ? 'Saving...' : 'Save Profile'}
+                  </button>
                 </div>
               </div>
             )}
@@ -494,14 +705,77 @@ export default function Settings() {
                   </p>
 
                   <div className="mt-6 space-y-6">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h4 className="text-sm font-medium text-gray-900">Change Password</h4>
-                        <p className="text-sm text-gray-500">Update your account password.</p>
+                    <div>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h4 className="text-sm font-medium text-gray-900">Change Password</h4>
+                          <p className="text-sm text-gray-500">Update your account password.</p>
+                        </div>
+                        <button
+                          onClick={() => setShowPasswordForm(!showPasswordForm)}
+                          className="inline-flex justify-center py-2 px-4 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                        >
+                          {showPasswordForm ? 'Cancel' : 'Change Password'}
+                        </button>
                       </div>
-                      <button className="inline-flex justify-center py-2 px-4 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                        Change Password
-                      </button>
+
+                      {showPasswordForm && (
+                        <form onSubmit={handlePasswordChange} className="mt-4 space-y-4 bg-gray-50 p-4 rounded-md">
+                          <div>
+                            <label htmlFor="currentPassword" className="block text-sm font-medium text-gray-700">
+                              Current Password
+                            </label>
+                            <input
+                              type="password"
+                              id="currentPassword"
+                              value={passwordData.currentPassword}
+                              onChange={(e) => setPasswordData({...passwordData, currentPassword: e.target.value})}
+                              className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                              required
+                            />
+                          </div>
+
+                          <div>
+                            <label htmlFor="newPassword" className="block text-sm font-medium text-gray-700">
+                              New Password
+                            </label>
+                            <input
+                              type="password"
+                              id="newPassword"
+                              value={passwordData.newPassword}
+                              onChange={(e) => setPasswordData({...passwordData, newPassword: e.target.value})}
+                              className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                              required
+                              minLength={8}
+                            />
+                            <p className="mt-1 text-xs text-gray-500">Must be at least 8 characters long.</p>
+                          </div>
+
+                          <div>
+                            <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
+                              Confirm New Password
+                            </label>
+                            <input
+                              type="password"
+                              id="confirmPassword"
+                              value={passwordData.confirmPassword}
+                              onChange={(e) => setPasswordData({...passwordData, confirmPassword: e.target.value})}
+                              className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                              required
+                            />
+                          </div>
+
+                          <div className="flex justify-end">
+                            <button
+                              type="submit"
+                              disabled={loading}
+                              className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
+                            >
+                              {loading ? 'Changing Password...' : 'Update Password'}
+                            </button>
+                          </div>
+                        </form>
+                      )}
                     </div>
 
                     <div className="border-t border-gray-200 pt-6">
@@ -517,6 +791,87 @@ export default function Settings() {
                           Sign Out
                         </button>
                       </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'admin' && isAdmin && (
+              <div className="bg-white shadow rounded-lg">
+                <div className="px-4 py-5 sm:p-6">
+                  <h3 className="text-lg leading-6 font-medium text-gray-900">Admin - User Impersonation</h3>
+                  <p className="mt-1 text-sm text-gray-500">
+                    View and debug user accounts by impersonating their company access.
+                  </p>
+
+                  {isImpersonating && (
+                    <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-md">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center">
+                          <svg className="h-5 w-5 text-yellow-400 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                          </svg>
+                          <p className="text-sm font-medium text-yellow-800">
+                            Currently impersonating company ID: {companyId}
+                          </p>
+                        </div>
+                        <button
+                          onClick={stopImpersonating}
+                          className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                        >
+                          Stop Impersonating
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="mt-6">
+                    <h4 className="text-sm font-medium text-gray-900 mb-4">All Users</h4>
+                    <div className="overflow-hidden shadow ring-1 ring-black ring-opacity-5 rounded-lg">
+                      <table className="min-w-full divide-y divide-gray-300">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th scope="col" className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900">Company ID</th>
+                            <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Company Name</th>
+                            <th scope="col" className="relative py-3.5 pl-3 pr-4">
+                              <span className="sr-only">Actions</span>
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-200 bg-white">
+                          {users.length === 0 ? (
+                            <tr>
+                              <td colSpan="3" className="text-center py-4 text-sm text-gray-500">
+                                No users found
+                              </td>
+                            </tr>
+                          ) : (
+                            users.map((userRecord) => (
+                              <tr key={userRecord.companyId}>
+                                <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-mono text-gray-900">
+                                  {userRecord.companyId?.substring(0, 8)}...
+                                </td>
+                                <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-900">
+                                  {userRecord.companyName}
+                                </td>
+                                <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm">
+                                  <button
+                                    onClick={() => {
+                                      impersonateCompany(userRecord.companyId)
+                                      setMessage({ type: 'success', text: `Now viewing data for: ${userRecord.companyName}` })
+                                    }}
+                                    disabled={isImpersonating && companyId === userRecord.companyId}
+                                    className="text-indigo-600 hover:text-indigo-900 disabled:text-gray-400 disabled:cursor-not-allowed font-medium"
+                                  >
+                                    {isImpersonating && companyId === userRecord.companyId ? 'Active' : 'Impersonate'}
+                                  </button>
+                                </td>
+                              </tr>
+                            ))
+                          )}
+                        </tbody>
+                      </table>
                     </div>
                   </div>
                 </div>
@@ -544,6 +899,12 @@ function TabIcon({ icon, className }) {
     shield: (
       <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+      </svg>
+    ),
+    admin: (
+      <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
       </svg>
     )
   }
