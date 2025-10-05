@@ -62,33 +62,59 @@ Deno.serve(async (req) => {
 
         console.log(`Collecting DEX data for company: ${companyName} (${cred.company_id})`)
 
-        // Call the bulk collection endpoint with service authentication
-        const response = await fetch(`${siteUrl}/api/dex/collect-bulk`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-Company-ID': cred.company_id,
-            'X-Service-Key': serviceApiKey
+        let totalRecordsCollected = 0
+        let offset = 0
+        let hasMore = true
+        const batchLimit = 25
+        const companyErrors = []
+
+        // Batch processing loop - continue until all records are processed
+        while (hasMore) {
+          console.log(`📦 Fetching batch for ${companyName}: offset=${offset}, limit=${batchLimit}`)
+
+          // Call the bulk collection endpoint with service authentication and batching params
+          const response = await fetch(`${siteUrl}/api/dex/collect-bulk?limit=${batchLimit}&offset=${offset}`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Company-ID': cred.company_id,
+              'X-Service-Key': serviceApiKey
+            }
+          })
+
+          if (!response.ok) {
+            const errorText = await response.text()
+            throw new Error(`HTTP ${response.status}: ${errorText}`)
           }
-        })
 
-        if (!response.ok) {
-          const errorText = await response.text()
-          throw new Error(`HTTP ${response.status}: ${errorText}`)
+          const result = await response.json()
+
+          // Accumulate results
+          totalRecordsCollected += result.recordsCount || 0
+          if (result.errors && result.errors.length > 0) {
+            companyErrors.push(...result.errors)
+          }
+
+          console.log(`✅ Batch complete: ${result.recordsCount || 0} records, hasMore=${result.batching?.hasMore || false}`)
+
+          // Check if there are more records to process
+          hasMore = result.batching?.hasMore || false
+          if (hasMore) {
+            offset = result.batching.nextOffset
+            // Small delay between batches to avoid rate limiting
+            await new Promise(resolve => setTimeout(resolve, 500))
+          }
         }
-
-        const result = await response.json()
 
         results.push({
           company_id: cred.company_id,
           company_name: companyName,
-          success: result.success,
-          recordsCollected: result.recordsCount || 0,
-          machinesUpdated: result.machinesUpdated || 0,
-          errors: result.errors || []
+          success: true,
+          recordsCollected: totalRecordsCollected,
+          errors: companyErrors.length > 0 ? companyErrors : []
         })
 
-        console.log(`✅ ${companyName}: ${result.recordsCount || 0} records collected`)
+        console.log(`✅ ${companyName}: ${totalRecordsCollected} total records collected`)
 
       } catch (error) {
         console.error(`❌ Error collecting for company ${cred.company_id}:`, error)

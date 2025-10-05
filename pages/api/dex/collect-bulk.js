@@ -12,6 +12,13 @@ export default async function handler(req) {
   }
 
   try {
+    // Parse batching parameters from query string
+    const url = new URL(req.url)
+    const batchLimit = parseInt(url.searchParams.get('limit') || '25', 10)
+    const batchOffset = parseInt(url.searchParams.get('offset') || '0', 10)
+
+    console.log(`📦 Batch processing: limit=${batchLimit}, offset=${batchOffset}`)
+
     let companyId
     let supabase
     let isServiceAuth = false
@@ -330,18 +337,31 @@ export default async function handler(req) {
       return new Response(JSON.stringify({
         success: true,
         recordsCount: 0,
-        message: 'No new DEX records to fetch'
+        message: 'No new DEX records to fetch',
+        hasMore: false,
+        totalAvailable: 0
       }), { status: 200, headers: { 'Content-Type': 'application/json' } })
     }
 
+    // Apply batching: slice the newDexRecords array
+    const totalAvailable = newDexRecords.length
+    const batchedRecords = newDexRecords.slice(batchOffset, batchOffset + batchLimit)
+    const hasMore = (batchOffset + batchLimit) < totalAvailable
+    const nextOffset = hasMore ? batchOffset + batchLimit : null
+
+    console.log(`📦 Batch processing: ${batchedRecords.length} records (${batchOffset + 1}-${batchOffset + batchedRecords.length} of ${totalAvailable})`)
+    if (hasMore) {
+      console.log(`📦 More records available: nextOffset=${nextOffset}`)
+    }
+
     // Step 6: Fetch raw DEX data for each new record using /dex/getRawDex/{dexId}
-    console.log(`Fetching raw DEX data for ${newDexRecords.length} new records...`)
+    console.log(`Fetching raw DEX data for ${batchedRecords.length} batched records...`)
 
     const processedRecords = [] // Lightweight records for database
     const completeRecords = [] // Complete records for file storage
     const fetchErrors = []
 
-    for (const newRecord of newDexRecords) {
+    for (const newRecord of batchedRecords) {
       try {
         console.log(`Fetching raw DEX data for actualDexId: ${newRecord.dexId} (rowId: ${newRecord.rowId}) for machine: ${newRecord.caseSerial}`)
 
@@ -892,7 +912,14 @@ export default async function handler(req) {
       recordsCount: processedRecords.length,
       machinesUpdated: Object.keys(machineStats).length,
       message: `Successfully collected ${processedRecords.length} new DEX records`,
-      errors: fetchErrors.length > 0 ? fetchErrors : undefined
+      errors: fetchErrors.length > 0 ? fetchErrors : undefined,
+      batching: {
+        limit: batchLimit,
+        offset: batchOffset,
+        totalAvailable,
+        hasMore,
+        nextOffset
+      }
     }), { status: 200, headers: { 'Content-Type': 'application/json' } })
 
   } catch (error) {
