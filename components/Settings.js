@@ -834,6 +834,7 @@ export default function Settings() {
                           <tr>
                             <th scope="col" className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900">Company ID</th>
                             <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Company Name</th>
+                            <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">DEX Credentials</th>
                             <th scope="col" className="relative py-3.5 pl-3 pr-4">
                               <span className="sr-only">Actions</span>
                             </th>
@@ -842,7 +843,7 @@ export default function Settings() {
                         <tbody className="divide-y divide-gray-200 bg-white">
                           {users.length === 0 ? (
                             <tr>
-                              <td colSpan="3" className="text-center py-4 text-sm text-gray-500">
+                              <td colSpan="4" className="text-center py-4 text-sm text-gray-500">
                                 No users found
                               </td>
                             </tr>
@@ -854,6 +855,17 @@ export default function Settings() {
                                 </td>
                                 <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-900">
                                   {userRecord.companyName}
+                                </td>
+                                <td className="whitespace-nowrap px-3 py-4 text-sm">
+                                  {userRecord.hasDexCredentials ? (
+                                    <span className="inline-flex items-center rounded-md bg-green-50 px-2 py-1 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20">
+                                      ✓ Configured
+                                    </span>
+                                  ) : (
+                                    <span className="inline-flex items-center rounded-md bg-gray-50 px-2 py-1 text-xs font-medium text-gray-600 ring-1 ring-inset ring-gray-500/10">
+                                      Not Configured
+                                    </span>
+                                  )}
                                 </td>
                                 <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm">
                                   <button

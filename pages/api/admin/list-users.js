@@ -31,43 +31,51 @@ export default async function handler(req) {
       })
     }
 
-    // Get all user credentials to see all users and their companies
-    const { data: credentials, error: credError } = await supabase
-      .from('user_credentials')
-      .select('user_id, company_id')
-      .order('company_id')
+    // Get all companies directly (not filtered by user_credentials)
+    const { data: companies, error: companiesError } = await supabase
+      .from('companies')
+      .select('id, company_name')
+      .order('company_name')
 
-    if (credError) {
-      console.error('Error fetching user credentials:', credError)
-      return new Response(JSON.stringify({ error: 'Failed to fetch users' }), {
+    if (companiesError) {
+      console.error('Error fetching companies:', companiesError)
+      return new Response(JSON.stringify({ error: 'Failed to fetch companies' }), {
         status: 500,
         headers: { 'Content-Type': 'application/json' }
       })
     }
 
-    // Get company names
-    const { data: companies, error: companiesError } = await supabase
-      .from('companies')
-      .select('id, name')
+    // Get all user_credentials to check which companies have DEX credentials saved
+    const { data: credentials, error: credError } = await supabase
+      .from('user_credentials')
+      .select('company_id, username_encrypted, password_encrypted, site_url')
 
-    if (companiesError) {
-      console.error('Error fetching companies:', companiesError)
+    if (credError) {
+      console.error('🔧 Admin list-users: Error fetching credentials:', JSON.stringify(credError))
     }
 
-    // Create a map of company IDs to names
-    const companyMap = {}
-    if (companies) {
-      companies.forEach(company => {
-        companyMap[company.id] = company.name
+    console.log('🔧 Admin list-users: Found companies:', companies)
+    console.log('🔧 Admin list-users: Found credentials:', credentials)
+
+    // Create a set of company IDs that have DEX credentials
+    const companiesWithCredentials = new Set()
+    if (credentials) {
+      credentials.forEach(cred => {
+        // Check if they have actual DEX credentials (not just a record)
+        if (cred.username_encrypted && cred.password_encrypted && cred.site_url) {
+          companiesWithCredentials.add(cred.company_id)
+        }
       })
     }
 
+    // Return all companies for impersonation with DEX status
     return new Response(JSON.stringify({
       success: true,
-      users: credentials.map(cred => ({
-        userId: cred.user_id,
-        companyId: cred.company_id,
-        companyName: companyMap[cred.company_id] || 'Unknown Company'
+      users: companies.map(company => ({
+        userId: null, // Not user-specific, just company impersonation
+        companyId: company.id,
+        companyName: company.company_name,
+        hasDexCredentials: companiesWithCredentials.has(company.id)
       }))
     }), {
       status: 200,
