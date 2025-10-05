@@ -20,6 +20,13 @@ export default async function handler(req) {
     const serviceKey = req.headers.get('X-Service-Key')
     const companyIdHeader = req.headers.get('X-Company-ID')
 
+    // Debug logging
+    console.log('📋 Headers received:', {
+      serviceKey: serviceKey ? 'present' : 'missing',
+      companyId: companyIdHeader ? 'present' : 'missing',
+      allHeaders: Object.fromEntries(req.headers.entries())
+    })
+
     if (serviceKey) {
       console.log('🔐 Service-level authentication detected')
 
