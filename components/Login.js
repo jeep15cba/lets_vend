@@ -17,9 +17,12 @@ export default function Login() {
     try {
       const { error } = await signIn(email, password)
 
-      if (error) throw error
+      if (error) {
+        // Error can be a string or an object with a message property
+        setError(typeof error === 'string' ? error : error.message || 'Authentication failed')
+      }
     } catch (error) {
-      setError(error.message)
+      setError(error.message || 'Authentication failed')
     } finally {
       setLoading(false)
     }

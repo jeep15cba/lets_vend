@@ -578,6 +578,36 @@ export default async function handler(req) {
 
       console.log(`Saved ${savedRecords?.length || processedRecords.length} DEX records to database`)
 
+      // Step 9.5: Clean up old DEX captures - keep only the most recent 10 per machine
+      console.log('Cleaning up old DEX captures...')
+      const uniqueCaseSerials = [...new Set(processedRecords.map(r => r.case_serial))]
+
+      for (const caseSerial of uniqueCaseSerials) {
+        // Get all DEX captures for this machine, ordered by created_at DESC
+        const { data: allCaptures } = await supabase
+          .from('dex_captures')
+          .select('id, created_at')
+          .eq('case_serial', caseSerial)
+          .eq('company_id', companyId)
+          .order('created_at', { ascending: false })
+
+        if (allCaptures && allCaptures.length > 10) {
+          // Keep the first 10 (most recent), delete the rest
+          const idsToDelete = allCaptures.slice(10).map(c => c.id)
+
+          const { error: deleteError } = await supabase
+            .from('dex_captures')
+            .delete()
+            .in('id', idsToDelete)
+
+          if (deleteError) {
+            console.error(`Error cleaning up old captures for ${caseSerial}:`, deleteError)
+          } else {
+            console.log(`Cleaned up ${idsToDelete.length} old DEX captures for ${caseSerial}`)
+          }
+        }
+      }
+
       // Step 10: Prepare DEX history updates for machines
       console.log('Building DEX history updates for machines...')
 
