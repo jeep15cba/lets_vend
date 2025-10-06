@@ -797,13 +797,14 @@ export default async function handler(req) {
             const time = events[timeKey] // Format: HHMM (e.g., "1237")
 
             if (date && time) {
-              // Convert YYMMDD and HHMM to ISO timestamp
+              // Convert YYMMDD and HHMM to ISO timestamp (LOCAL TIME - no Z suffix)
+              // EA1 timestamps are in local machine time, not UTC
               const year = '20' + date.substring(0, 2)
               const month = date.substring(2, 4)
               const day = date.substring(4, 6)
               const hour = time.substring(0, 2).padStart(2, '0')
               const minute = time.substring(2, 4).padStart(2, '0')
-              const timestamp = `${year}-${month}-${day}T${hour}:${minute}:00Z`
+              const timestamp = `${year}-${month}-${day}T${hour}:${minute}:00`
 
               newErrors.push({
                 type: 'EA1',
