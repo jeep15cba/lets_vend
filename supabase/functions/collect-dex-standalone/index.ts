@@ -982,6 +982,14 @@ Deno.serve(async (req) => {
 
             const latestErrors = mergedErrors
 
+            // Calculate 4-hour DEX count from updated history
+            const now = new Date()
+            const fourHoursAgo = new Date(now.getTime() - (4 * 60 * 60 * 1000))
+            const recentDexCount = limitedDexHistory.filter(entry => {
+              const createdDate = new Date(entry.created)
+              return createdDate > fourHoursAgo
+            }).length
+
             // Update machine with correct field names from /collect-bulk
             const { error: updateError } = await supabase
               .from('machines')
@@ -990,7 +998,7 @@ Deno.serve(async (req) => {
                 latest_dex_parsed: update.parsed_data, // Store latest parsed_data for device cards
                 latest_errors: latestErrors, // Store EA1/MA5 errors with action status
                 dex_last_capture: latestDexTimestamp,
-                dex_last_4hrs: 1, // Count (will be updated by the 4-hour flag update below)
+                dex_last_4hrs: recentDexCount, // Actual count from history
                 dex_history: limitedDexHistory,
                 updated_at: new Date().toISOString()
               })
