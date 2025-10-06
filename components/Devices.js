@@ -3,6 +3,22 @@ import { getMA5ErrorDescription } from '../lib/ma5-error-codes';
 import { getEA1ErrorDescription } from '../lib/ea1-error-codes';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 // Helper function to convert temperature from raw DEX format to Celsius
 // Some machines report as integers (e.g., 800 = 8.0°C), others as actual values (e.g., 5 = 5°C)
@@ -97,6 +113,32 @@ const getDexIdFromHistory = (device) => {
   return latestEntry?.dexId || device.dex_history[0]?.dexId || null;
 };
 
+// Sortable Device Row Component
+function SortableDeviceRow({ device, children }) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: device.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <div ref={setNodeRef} style={style} {...attributes}>
+      <div className="bg-white border border-gray-200 rounded-lg p-2 sm:p-3 shadow-sm hover:shadow-md transition-shadow">
+        {children({ dragHandleProps: listeners })}
+      </div>
+    </div>
+  );
+}
+
 export default function Devices() {
   const { user, signOut, hasCredentials, credentialsLoading, timezone } = useAuth();
 
@@ -141,7 +183,7 @@ export default function Devices() {
     search: '',
     hideNoDex: true // Hide machines with no DEX data - permanently active by default
   });
-  const [sortBy, setSortBy] = useState('case'); // 'case', 'last_seen'
+  const [sortBy, setSortBy] = useState('order'); // 'order', 'case', 'last_seen'
   const [sortOrder, setSortOrder] = useState('asc'); // 'asc', 'desc'
 
   // Client-side mounting check
@@ -446,6 +488,66 @@ export default function Devices() {
     }
   };
 
+  // Drag and drop sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  // Handle drag end - reorder devices
+  const handleDragEnd = async (event) => {
+    const { active, over } = event;
+
+    if (!over || active.id === over.id) {
+      return;
+    }
+
+    // Get the current filtered and sorted devices
+    const currentDevices = getFilteredAndSortedDevices();
+
+    const oldIndex = currentDevices.findIndex(d => d.id === active.id);
+    const newIndex = currentDevices.findIndex(d => d.id === over.id);
+
+    if (oldIndex === -1 || newIndex === -1) {
+      return;
+    }
+
+    // Reorder devices array
+    const reorderedDevices = arrayMove(currentDevices, oldIndex, newIndex);
+
+    // Update display_order for all affected devices
+    const machineOrders = reorderedDevices.map((device, index) => ({
+      id: device.id,
+      display_order: index + 1
+    }));
+
+    // Optimistically update UI
+    setSavedDevices(reorderedDevices.map((device, index) => ({
+      ...device,
+      display_order: index + 1
+    })));
+
+    // Save to API
+    try {
+      const response = await axios.post('/api/machines/update-order', {
+        machineOrders
+      });
+
+      if (!response.data.success) {
+        throw new Error('Failed to update order');
+      }
+
+      console.log('Order updated successfully');
+    } catch (error) {
+      console.error('Error updating order:', error);
+      setError('Failed to save new order');
+      // Reload devices to revert optimistic update
+      await loadSavedDevices();
+    }
+  };
+
   // Filter and sort devices
   const getFilteredAndSortedDevices = () => {
     let filtered = [...savedDevices];
@@ -494,7 +596,12 @@ export default function Devices() {
     filtered.sort((a, b) => {
       let comparison = 0;
 
-      if (sortBy === 'case') {
+      if (sortBy === 'order') {
+        // Sort by display_order (nulls go to end)
+        const aOrder = a.display_order !== null && a.display_order !== undefined ? a.display_order : 999999;
+        const bOrder = b.display_order !== null && b.display_order !== undefined ? b.display_order : 999999;
+        comparison = aOrder - bOrder;
+      } else if (sortBy === 'case') {
         comparison = (a.case_serial || '').localeCompare(b.case_serial || '');
       } else if (sortBy === 'last_seen') {
         const aTime = new Date(a.latest_dex_data || 0).getTime();
@@ -521,7 +628,21 @@ export default function Devices() {
 
         {/* Table Header - Hidden on mobile */}
         <div className="hidden sm:block bg-gray-50 border border-gray-200 rounded-lg p-4">
-          <div className="grid gap-4 text-sm font-semibold text-gray-700" style={{gridTemplateColumns: '1fr 1fr 1fr 1fr 1fr 1fr 40px'}}>
+          <div className="grid gap-4 text-sm font-semibold text-gray-700" style={{gridTemplateColumns: '60px 1fr 1.5fr 1fr 1fr 0.75fr 0.75fr 40px'}}>
+            <button
+              onClick={() => {
+                if (sortBy === 'order') {
+                  setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+                } else {
+                  setSortBy('order');
+                  setSortOrder('asc');
+                }
+              }}
+              className="text-left flex items-center gap-1 hover:text-gray-900"
+              title="Drag and drop to reorder"
+            >
+              Order {sortBy === 'order' && (sortOrder === 'asc' ? '↑' : '↓')}
+            </button>
             <button
               onClick={() => {
                 if (sortBy === 'case') {
@@ -550,16 +671,27 @@ export default function Devices() {
             >
               Last Seen<sup className="ml-0.5 text-blue-500">ⓘ</sup> {sortBy === 'last_seen' && (sortOrder === 'asc' ? '↑' : '↓')}
             </button>
-            <div>Temperature</div>
+            <div>Temp</div>
             <div>Cash Amt</div>
             <div className="text-center text-xs">Actions</div>
           </div>
         </div>
 
         {/* Device Rows */}
-        {devices.map((device, index) => {
-          return (
-            <div key={device.id || index} className="bg-white border border-gray-200 rounded-lg p-3 sm:p-4 shadow-sm hover:shadow-md transition-shadow">
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleDragEnd}
+        >
+          <SortableContext
+            items={devices.map(d => d.id)}
+            strategy={verticalListSortingStrategy}
+            disabled={sortBy !== 'order'}
+          >
+            {devices.map((device, index) => (
+              <SortableDeviceRow key={device.id} device={device}>
+                {({ dragHandleProps }) => (
+                  <>
               {/* Mobile Layout */}
               <div className="sm:hidden space-y-3">
                 <div className="flex justify-between items-start">
@@ -875,7 +1007,21 @@ export default function Devices() {
               </div>
 
               {/* Desktop Layout */}
-              <div className="hidden sm:grid gap-4 items-center text-sm" style={{gridTemplateColumns: '1fr 1fr 1fr 1fr 1fr 1fr 40px'}}>
+              <div className="hidden sm:grid gap-4 items-center text-sm" style={{gridTemplateColumns: '60px 1fr 1.5fr 1fr 1fr 0.75fr 0.75fr 40px'}}>
+                {/* Order / Drag Handle */}
+                <div className="flex items-center justify-center" title="Drag to reorder">
+                  <button
+                    {...(sortBy === 'order' ? dragHandleProps : {})}
+                    className={`flex items-center gap-1 ${sortBy === 'order' ? 'cursor-move hover:bg-gray-100 p-1 rounded' : 'cursor-default'}`}
+                    disabled={sortBy !== 'order'}
+                  >
+                    <svg className="w-5 h-5 text-gray-400 hover:text-gray-600" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M9 3h2v2H9V3zm0 4h2v2H9V7zm0 4h2v2H9v-2zm0 4h2v2H9v-2zm0 4h2v2H9v-2zM13 3h2v2h-2V3zm0 4h2v2h-2V7zm0 4h2v2h-2v-2zm0 4h2v2h-2v-2zm0 4h2v2h-2v-2z"/>
+                    </svg>
+                    <span className="text-xs text-gray-500">{device.display_order || '-'}</span>
+                  </button>
+                </div>
+
                 {/* Case Serial */}
                 <div>
                   <div className="font-mono text-gray-900 font-medium">
@@ -1238,8 +1384,8 @@ export default function Devices() {
                                               />
                                             </label>
                                           </div>
-                                      </div>
-                                    )
+                                        </div>
+                                      )
                                     })}
                                 </div>
                               )}
@@ -1350,9 +1496,12 @@ export default function Devices() {
                   </div>
                 </div>
               </div>
-            </div>
-          )
-        })}
+              </>
+                )}
+              </SortableDeviceRow>
+            ))}
+          </SortableContext>
+        </DndContext>
       </div>
     );
   };
