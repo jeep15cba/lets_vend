@@ -704,12 +704,31 @@ Deno.serve(async (req) => {
 
         console.log(`  → Found ${machines.length} machines in database`)
 
-        // Filter to only records that are newer than what we have for each machine
+        // Get existing DEX IDs to prevent duplicates
+        const { data: existingDex, error: fetchError } = await supabase
+          .from('dex_captures')
+          .select('dex_id')
+          .eq('company_id', companyId)
+
+        if (fetchError) {
+          throw new Error(`Failed to fetch existing DEX: ${fetchError.message}`)
+        }
+
+        const existingDexIds = new Set((existingDex || []).map(d => String(d.dex_id)))
+        console.log(`  → Found ${existingDexIds.size} existing DEX IDs in database`)
+
+        // Filter to only records that are newer than what we have for each machine AND not already saved
         const newRecords = metadata.filter(record => {
           const caseSerial = record.devices?.caseSerial
           const dexCreated = record.dexRaw?.created
+          const dexId = record.dexRaw?.id
 
-          if (!caseSerial || !dexCreated) return false
+          if (!caseSerial || !dexCreated || !dexId) return false
+
+          // Skip if already in database
+          if (existingDexIds.has(String(dexId))) {
+            return false
+          }
 
           const machine = machineMap[caseSerial]
           if (!machine) {
@@ -727,7 +746,7 @@ Deno.serve(async (req) => {
           return recordTimestamp > machine.latestTimestamp
         })
 
-        console.log(`  → Found ${newRecords.length} new/updated DEX records to fetch`)
+        console.log(`  → Found ${newRecords.length} new DEX records to fetch (after deduplication)`)
 
         if (newRecords.length === 0) {
           results.push({
