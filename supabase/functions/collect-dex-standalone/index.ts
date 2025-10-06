@@ -842,11 +842,14 @@ Deno.serve(async (req) => {
 
         console.log(`  → Saving ${dexRecordsToSave.length} DEX records to database...`)
 
-        // Save to Supabase
+        // Save to Supabase using upsert to handle duplicates gracefully
         if (dexRecordsToSave.length > 0) {
           const { error: saveError } = await supabase
             .from('dex_captures')
-            .insert(dexRecordsToSave)
+            .upsert(dexRecordsToSave, {
+              onConflict: 'dex_id,company_id',
+              ignoreDuplicates: false // Update if exists
+            })
 
           if (saveError) {
             throw new Error(`Failed to save DEX records: ${saveError.message}`)
