@@ -1,0 +1,5 @@
+[functions.collect-dex-standalone]
+verify_jwt = false
+
+[functions.collect-dex-proxy]
+verify_jwt = false
