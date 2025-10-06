@@ -661,7 +661,7 @@ Deno.serve(async (req) => {
           throw new Error('Authentication failed')
         }
 
-        // Fetch DEX metadata
+        // Fetch DEX metadata (last 24 hours)
         const { data: metadata, csrfToken } = await fetchDexMetadata(cookies, siteUrl)
         if (metadata.length === 0) {
           console.log('  ⚠ No DEX metadata found')
@@ -674,41 +674,12 @@ Deno.serve(async (req) => {
           continue
         }
 
-        // Get existing DEX IDs from database
-        const { data: existingDex, error: fetchError } = await supabase
-          .from('dex_captures')
-          .select('dex_id')
-          .eq('company_id', companyId)
+        console.log(`  → Fetched ${metadata.length} DEX records from Cantaloupe API`)
 
-        if (fetchError) {
-          throw new Error(`Failed to fetch existing DEX: ${fetchError.message}`)
-        }
-
-        const existingDexIds = new Set((existingDex || []).map(d => String(d.dex_id)))
-        console.log(`  → Found ${existingDexIds.size} existing DEX records in database`)
-
-        // Filter to only new records
-        const newRecords = metadata.filter(record => {
-          const dexId = record.dexRaw?.id
-          return dexId && !existingDexIds.has(String(dexId))
-        })
-
-        console.log(`  → Found ${newRecords.length} new DEX records to fetch`)
-
-        if (newRecords.length === 0) {
-          results.push({
-            company_id: companyId,
-            company_name: companyName,
-            success: true,
-            recordsCollected: 0
-          })
-          continue
-        }
-
-        // Get all machines for this company to look up machine_id
+        // Get all machines for this company with their latest DEX timestamps
         const { data: machines, error: machinesError } = await supabase
           .from('machines')
-          .select('id, case_serial, company_id')
+          .select('id, case_serial, company_id, latest_dex_data')
           .eq('company_id', companyId)
 
         if (machinesError || !machines) {
@@ -722,13 +693,51 @@ Deno.serve(async (req) => {
           continue
         }
 
-        // Create a lookup map for machines
+        // Create a map of case_serial -> latest_dex_data timestamp
         const machineMap = {}
         machines.forEach(machine => {
-          machineMap[machine.case_serial] = machine
+          machineMap[machine.case_serial] = {
+            ...machine,
+            latestTimestamp: machine.latest_dex_data ? new Date(machine.latest_dex_data) : null
+          }
         })
 
         console.log(`  → Found ${machines.length} machines in database`)
+
+        // Filter to only records that are newer than what we have for each machine
+        const newRecords = metadata.filter(record => {
+          const caseSerial = record.devices?.caseSerial
+          const dexCreated = record.dexRaw?.created
+
+          if (!caseSerial || !dexCreated) return false
+
+          const machine = machineMap[caseSerial]
+          if (!machine) {
+            console.log(`  ⚠ Machine not found for case_serial: ${caseSerial}`)
+            return false
+          }
+
+          // If machine has no latest_dex_data, fetch this DEX
+          if (!machine.latestTimestamp) {
+            return true
+          }
+
+          // Only fetch if this DEX is newer than what we have
+          const recordTimestamp = new Date(dexCreated)
+          return recordTimestamp > machine.latestTimestamp
+        })
+
+        console.log(`  → Found ${newRecords.length} new/updated DEX records to fetch`)
+
+        if (newRecords.length === 0) {
+          results.push({
+            company_id: companyId,
+            company_name: companyName,
+            success: true,
+            recordsCollected: 0
+          })
+          continue
+        }
 
         // Fetch raw DEX for new records
         const dexRecordsToSave = []
@@ -830,10 +839,10 @@ Deno.serve(async (req) => {
         // Update machine metadata and dex_history
         for (const [caseSerial, update] of machineUpdates.entries()) {
           try {
-            // Get current machine record
+            // Get current machine record with existing errors
             const { data: machine, error: fetchMachineError } = await supabase
               .from('machines')
-              .select('id, dex_history')
+              .select('id, dex_history, latest_errors')
               .eq('case_serial', caseSerial)
               .eq('company_id', companyId)
               .single()
@@ -864,12 +873,113 @@ Deno.serve(async (req) => {
             // Get the most recent DEX timestamp from the sorted history
             const latestDexTimestamp = limitedDexHistory.length > 0 ? limitedDexHistory[0].created : update.created
 
+            // Extract EA1 and MA5 errors from latest parsed data
+            const existingErrors = machine.latest_errors || []
+            const newErrors = []
+
+            // Extract EA1 errors (persistent with timestamp)
+            if (update.parsed_data?.hybridData?.keyValueGroups?.events) {
+              const events = update.parsed_data.hybridData.keyValueGroups.events
+              const ea1Keys = Object.keys(events).filter(key => key.match(/^ea1_event_\w+_date$/))
+
+              for (const dateKey of ea1Keys) {
+                const code = dateKey.replace('ea1_event_', '').replace('_date', '')
+                const timeKey = `ea1_event_${code}_time`
+                const date = events[dateKey] // Format: YYMMDD (e.g., "251006")
+                const time = events[timeKey] // Format: HHMM (e.g., "1123")
+
+                if (date && time) {
+                  // Convert YYMMDD and HHMM to ISO timestamp
+                  const year = '20' + date.substring(0, 2)
+                  const month = date.substring(2, 4)
+                  const day = date.substring(4, 6)
+                  const hour = time.substring(0, 2).padStart(2, '0')
+                  const minute = time.substring(2, 4).padStart(2, '0')
+                  const timestamp = `${year}-${month}-${day}T${hour}:${minute}:00Z`
+
+                  newErrors.push({
+                    type: 'EA1',
+                    code: code.toUpperCase(),
+                    date,
+                    time,
+                    timestamp,
+                    actioned: false,
+                    actioned_at: null
+                  })
+                }
+              }
+            }
+
+            // Extract MA5 errors (transient - appear/disappear)
+            if (update.parsed_data?.hybridData?.keyValueGroups?.diagnostics?.ma5_error_codes) {
+              const ma5Codes = update.parsed_data.hybridData.keyValueGroups.diagnostics.ma5_error_codes.split(',')
+              const captureTimestamp = update.created || new Date().toISOString()
+
+              ma5Codes.forEach(code => {
+                if (code) {
+                  newErrors.push({
+                    type: 'MA5',
+                    code: code.toUpperCase(),
+                    timestamp: captureTimestamp,
+                    actioned: false,
+                    actioned_at: null
+                  })
+                }
+              })
+            }
+
+            // Merge new errors with existing errors, preserving actioned status
+            const mergedErrors = []
+
+            // Process new errors from this DEX capture
+            newErrors.forEach(newError => {
+              // Check if this exact error already exists
+              const existingError = existingErrors.find(e => {
+                if (newError.type === 'EA1') {
+                  // For EA1: match by code AND timestamp
+                  return e.type === 'EA1' && e.code === newError.code && e.timestamp === newError.timestamp
+                } else {
+                  // For MA5: match by code only (transient errors)
+                  return e.type === 'MA5' && e.code === newError.code
+                }
+              })
+
+              if (existingError) {
+                // Same error - preserve actioned status
+                mergedErrors.push({
+                  ...newError,
+                  actioned: existingError.actioned,
+                  actioned_at: existingError.actioned_at
+                })
+              } else {
+                // New error - add with actioned: false
+                mergedErrors.push(newError)
+              }
+            })
+
+            // Keep old EA1 errors that are still actioned (don't appear in new DEX but were actioned)
+            existingErrors.forEach(oldError => {
+              if (oldError.type === 'EA1' && oldError.actioned) {
+                // Check if this error is NOT in the new errors
+                const stillExists = newErrors.find(e =>
+                  e.type === 'EA1' && e.code === oldError.code && e.timestamp === oldError.timestamp
+                )
+                if (!stillExists) {
+                  // Keep the actioned error even though it's not in the new DEX data
+                  mergedErrors.push(oldError)
+                }
+              }
+            })
+
+            const latestErrors = mergedErrors
+
             // Update machine with correct field names from /collect-bulk
             const { error: updateError } = await supabase
               .from('machines')
               .update({
                 latest_dex_data: latestDexTimestamp, // Use most recent from history
                 latest_dex_parsed: update.parsed_data, // Store latest parsed_data for device cards
+                latest_errors: latestErrors, // Store EA1/MA5 errors with action status
                 dex_last_capture: latestDexTimestamp,
                 dex_last_4hrs: 1, // Count (will be updated by the 4-hour flag update below)
                 dex_history: limitedDexHistory,
@@ -879,6 +989,8 @@ Deno.serve(async (req) => {
 
             if (updateError) {
               console.log(`  ⚠ Failed to update machine ${caseSerial}: ${updateError.message}`)
+            } else {
+              console.log(`  ✓ Updated machine ${caseSerial} - ${latestErrors.length} errors tracked`)
             }
           } catch (error) {
             console.log(`  ⚠ Error updating machine ${caseSerial}:`, error)

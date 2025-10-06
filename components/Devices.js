@@ -63,6 +63,29 @@ const formatAESTDate = (dateString, includeTime = true, userTimezone = 'Australi
   return date.toLocaleString('en-AU', options);
 };
 
+// Helper function to format error timestamps (already in local time, not GMT)
+// EA1 error timestamps are stored in local time, so no timezone conversion needed
+const formatLocalDate = (dateString, includeTime = true) => {
+  if (!dateString) return 'Never';
+
+  // Parse as-is without timezone conversion (error timestamps are already local time)
+  const date = new Date(dateString);
+
+  const options = {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    ...(includeTime && {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false
+    })
+  };
+
+  return date.toLocaleString('en-AU', options);
+};
+
 // Helper function to find the dexId from dex_history that matches the latest_dex_data timestamp
 const getDexIdFromHistory = (device) => {
   if (!device.latest_dex_data || !device.dex_history || device.dex_history.length === 0) {
@@ -80,6 +103,11 @@ export default function Devices() {
   // Format dates with user's timezone
   const formatDate = (dateString, includeTime = true) => {
     return formatAESTDate(dateString, includeTime, timezone || 'Australia/Brisbane');
+  };
+
+  // Format error timestamps (already local time - no timezone conversion)
+  const formatErrorDate = (dateString, includeTime = true) => {
+    return formatLocalDate(dateString, includeTime);
   };
 
   // devicesData removed - now using savedDevices from Supabase directly
@@ -1176,7 +1204,7 @@ export default function Devices() {
                                                 </div>
                                               )}
                                               <div className="text-xs text-gray-600 mt-1">
-                                                {formatDate(error.timestamp)}
+                                                {formatErrorDate(error.timestamp)}
                                               </div>
                                             </div>
                                             <label className="flex items-center gap-2 cursor-pointer flex-shrink-0">
@@ -1274,7 +1302,7 @@ export default function Devices() {
                                               </div>
                                             )}
                                             <div className="text-xs text-gray-600 mt-1">
-                                              {formatDate(error.timestamp)}
+                                              {formatErrorDate(error.timestamp)}
                                             </div>
                                           </div>
                                           <label className="flex items-center gap-2 cursor-pointer flex-shrink-0">
