@@ -1,3 +1,24 @@
+/**
+ * LEGACY DEX Collection API
+ *
+ * ⚠️ This endpoint is now superseded by the Supabase Edge Function for automated collection.
+ *
+ * For scheduled/automated DEX collection, use:
+ *   - Supabase Edge Function: supabase/functions/collect-dex-standalone/
+ *   - Documentation: supabase/functions/collect-dex-standalone/README.md
+ *   - Recommended: Run via pg_cron every 15-30 minutes
+ *
+ * This endpoint remains available for:
+ *   - Manual/on-demand DEX collection
+ *   - Large batch processing (500+ records)
+ *   - Historical data backfill
+ *   - Testing and debugging
+ *
+ * Key differences:
+ *   - Edge Function: Optimized for scheduled runs, faster, lower cost
+ *   - This endpoint: Full batch processing, Cloudflare Pages runtime
+ */
+
 import { getUserCompanyContext, createClient } from '../../../lib/supabase/server'
 import { createServiceClient, validateServiceAuth } from '../../../lib/supabase/service'
 export const runtime = 'edge'
