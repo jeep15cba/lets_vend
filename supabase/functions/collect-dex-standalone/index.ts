@@ -934,7 +934,7 @@ Deno.serve(async (req) => {
 
             // Process new errors from this DEX capture
             newErrors.forEach(newError => {
-              // Check if this exact error already exists
+              // Check if this exact error already exists (same code AND timestamp)
               const existingError = existingErrors.find(e => {
                 if (newError.type === 'EA1') {
                   // For EA1: match by code AND timestamp
@@ -946,27 +946,35 @@ Deno.serve(async (req) => {
               })
 
               if (existingError) {
-                // Same error - preserve actioned status
+                // Exact same error - preserve actioned status
                 mergedErrors.push({
                   ...newError,
                   actioned: existingError.actioned,
                   actioned_at: existingError.actioned_at
                 })
               } else {
-                // New error - add with actioned: false
+                // New error or different timestamp - add with actioned: false
                 mergedErrors.push(newError)
               }
             })
 
-            // Keep old EA1 errors that are still actioned (don't appear in new DEX but were actioned)
+            // For EA1 errors: Keep old actioned errors ONLY if there's no newer error with the same code
             existingErrors.forEach(oldError => {
               if (oldError.type === 'EA1' && oldError.actioned) {
-                // Check if this error is NOT in the new errors
-                const stillExists = newErrors.find(e =>
+                // Check if this exact error (code + timestamp) is NOT in the new errors
+                const exactMatch = newErrors.find(e =>
                   e.type === 'EA1' && e.code === oldError.code && e.timestamp === oldError.timestamp
                 )
-                if (!stillExists) {
-                  // Keep the actioned error even though it's not in the new DEX data
+
+                // Check if there's ANY newer error with the same code (different timestamp)
+                const newerErrorWithSameCode = newErrors.find(e =>
+                  e.type === 'EA1' && e.code === oldError.code
+                )
+
+                // Only keep old actioned error if:
+                // 1. It's not an exact match (already handled above)
+                // 2. There's no newer error with the same code
+                if (!exactMatch && !newerErrorWithSameCode) {
                   mergedErrors.push(oldError)
                 }
               }
