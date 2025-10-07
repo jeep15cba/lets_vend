@@ -1,4 +1,4 @@
-import { createClient } from '../../../lib/supabase/server'
+import { createServiceClient } from '../../../lib/supabase/server'
 export const runtime = 'edge'
 
 export default async function handler(req) {
@@ -13,9 +13,11 @@ export default async function handler(req) {
   }
 
   try {
-    const { supabase } = createClient(req)
+    // Use service client for signup - this is acceptable because the app is creating
+    // users on behalf of external users (not user-based updates)
+    const { supabase } = createServiceClient()
 
-    // 1. Create the user account first
+    // 1. Create the user account first using admin API
     const { data: authData, error: authError } = await supabase.auth.admin.createUser({
       email,
       password,
@@ -31,6 +33,10 @@ export default async function handler(req) {
       return new Response(JSON.stringify({ error: authError.message }), { status: 400, headers: { 'Content-Type': 'application/json' } })
     }
 
+    if (!authData.user) {
+      return new Response(JSON.stringify({ error: 'Failed to create user' }), { status: 400, headers: { 'Content-Type': 'application/json' } })
+    }
+
     // 2. Create company record if company_name provided
     let companyId = null
     if (metadata.company_name) {
@@ -39,23 +45,22 @@ export default async function handler(req) {
         .insert({
           company_name: metadata.company_name,
           company_code: metadata.company_name.toUpperCase().replace(/\s+/g, ''),
-          is_active: true
+          is_active: true,
+          settings: { machineTypes: ['unknown', 'beverage', 'food'] }
         })
         .select()
         .single()
 
       if (companyError) {
         console.error('Company creation error:', companyError)
-        // If company creation fails, we should clean up the user
+        // If company creation fails, clean up the user
         await supabase.auth.admin.deleteUser(authData.user.id)
         return new Response(JSON.stringify({ error: 'Failed to create company' }), { status: 400, headers: { 'Content-Type': 'application/json' } })
       }
 
       companyId = companyData.id
-    }
 
-    // 3. Update user metadata with company_id (in app_metadata for RLS)
-    if (companyId) {
+      // 3. Update user metadata with company_id (in app_metadata for RLS)
       const { error: updateError } = await supabase.auth.admin.updateUserById(
         authData.user.id,
         {
@@ -65,7 +70,7 @@ export default async function handler(req) {
           },
           user_metadata: {
             ...authData.user.user_metadata,
-            company_id: companyId  // Also keep in user_metadata for backwards compatibility
+            company_id: companyId
           }
         }
       )

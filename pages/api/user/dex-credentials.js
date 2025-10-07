@@ -23,7 +23,7 @@ export default async function handler(req) {
 
         const { data, error } = await supabase
           .from('user_credentials')
-          .select('username_encrypted, site_url, created_at')
+          .select('username_encrypted, password_encrypted, site_url, created_at')
           .eq('user_id', user.id)
           .single()
 
@@ -33,6 +33,22 @@ export default async function handler(req) {
         }
 
         if (data) {
+          // Clean up invalid records with NULL password_encrypted
+          if (!data.password_encrypted || data.password_encrypted === null) {
+            console.log('🧹 Cleaning up invalid credential record with NULL password')
+            await supabase
+              .from('user_credentials')
+              .delete()
+              .eq('user_id', user.id)
+
+            // Return empty state after cleanup
+            return new Response(JSON.stringify({
+              username: '',
+              siteUrl: 'https://dashboard.cantaloupe.online',
+              isConfigured: false
+            }), { status: 200, headers: { 'Content-Type': 'application/json' } })
+          }
+
           // Check if this is a placeholder record (contains unencrypted placeholder values)
           const isPlaceholder = data.username_encrypted === 'placeholder_encrypted_username' ||
                                data.username_encrypted?.startsWith('placeholder_')
@@ -90,30 +106,53 @@ export default async function handler(req) {
       }
 
       try {
+        // Password is always required when saving/updating DEX credentials
+        if (!password) {
+          return new Response(JSON.stringify({ error: 'Password is required' }), {
+            status: 400,
+            headers: { 'Content-Type': 'application/json' }
+          })
+        }
+
         // Encrypt the credentials for authenticated users
         const encryptedUsername = await encrypt(username)
-        const encryptedPassword = password ? await encrypt(password) : null
+        const encryptedPassword = await encrypt(password)
 
         // Save to Supabase user_credentials table with RLS
         const { supabase } = createClient(req)
+
+        // First, clean up any invalid records with NULL password_encrypted
+        console.log('🧹 Checking for invalid credential records before upsert')
+        const { data: existingData, error: checkError } = await supabase
+          .from('user_credentials')
+          .select('id, password_encrypted')
+          .eq('user_id', user.id)
+          .single()
+
+        if (existingData && !existingData.password_encrypted) {
+          console.log('🧹 Found invalid record, deleting before upsert')
+          await supabase
+            .from('user_credentials')
+            .delete()
+            .eq('user_id', user.id)
+        }
 
         const credentialsData = {
           user_id: user.id,
           company_id: companyId,
           username_encrypted: encryptedUsername,
+          password_encrypted: encryptedPassword,
           site_url: siteUrl,
           is_active: true,
           validation_status: 'pending',
           updated_at: new Date().toISOString()
         }
 
-        if (encryptedPassword) {
-          credentialsData.password_encrypted = encryptedPassword
-        }
-
         const { error } = await supabase
           .from('user_credentials')
-          .upsert(credentialsData)
+          .upsert(credentialsData, {
+            onConflict: 'user_id'
+          })
 
         if (error) {
           console.error('Database error saving credentials:', error)
@@ -130,6 +169,29 @@ export default async function handler(req) {
         } catch (testError) {
           console.error('DEX credentials test failed:', testError)
           credentialsValid = false
+        }
+
+        // Update user metadata to reflect credentials status
+        // This will trigger AuthContext to update hasCredentials
+        console.log('🔧 Attempting to update user metadata for user:', user.id)
+        try {
+          const { data: updateData, error: updateError } = await supabase.auth.updateUser({
+            data: {
+              hasValidCredentials: true,
+              credentialsLastValidated: new Date().toISOString()
+            }
+          })
+
+          if (updateError) {
+            console.error('❌ Failed to update user metadata:', updateError)
+          } else if (updateData) {
+            console.log('✅ Updated user metadata with hasValidCredentials: true')
+            console.log('🔧 Updated user data:', updateData.user?.user_metadata)
+          } else {
+            console.log('⚠️ Update returned no data or error')
+          }
+        } catch (metadataError) {
+          console.error('💥 Exception updating user metadata:', metadataError)
         }
 
         return new Response(JSON.stringify({

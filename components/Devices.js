@@ -3,6 +3,7 @@ import { getMA5ErrorDescription } from '../lib/ma5-error-codes';
 import { getEA1ErrorDescription } from '../lib/ea1-error-codes';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
+import { supabase } from '../lib/supabase/client';
 import {
   DndContext,
   closestCenter,
@@ -114,7 +115,7 @@ const getDexIdFromHistory = (device) => {
 };
 
 // Sortable Device Row Component
-function SortableDeviceRow({ device, children }) {
+function SortableDeviceRow({ device, children, isEditing }) {
   const {
     attributes,
     listeners,
@@ -132,7 +133,7 @@ function SortableDeviceRow({ device, children }) {
 
   return (
     <div ref={setNodeRef} style={style} {...attributes}>
-      <div className="bg-white border border-gray-200 rounded-lg p-2 sm:p-3 shadow-sm hover:shadow-md transition-shadow">
+      <div className={`bg-white border border-gray-200 rounded-lg p-2 sm:p-3 shadow-sm hover:shadow-md transition-shadow ${isEditing ? 'device-row-editing' : ''}`}>
         {children({ dragHandleProps: listeners })}
       </div>
     </div>
@@ -165,8 +166,11 @@ export default function Devices() {
   const [lastDexCollection, setLastDexCollection] = useState(null);
   const [editingDevice, setEditingDevice] = useState(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [openDropdownId, setOpenDropdownId] = useState(null);
+  const [deletingDevice, setDeletingDevice] = useState(null);
   const [editForm, setEditForm] = useState({
-    location: '',
+    location_type: 'optional', // 'streetAddress', 'optional', or 'other'
+    location_other: '',
     machine_type: '',
     cash_enabled: false
   });
@@ -186,6 +190,14 @@ export default function Devices() {
   const [sortBy, setSortBy] = useState('order'); // 'order', 'case', 'last_seen'
   const [sortOrder, setSortOrder] = useState('asc'); // 'asc', 'desc'
 
+  // Import modal state
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [importResults, setImportResults] = useState({
+    updated: [],
+    unchanged: [],
+    total: 0
+  });
+
   // Client-side mounting check
   useEffect(() => {
     setIsMounted(true);
@@ -201,6 +213,42 @@ export default function Devices() {
 
     return () => clearInterval(clockInterval);
   }, [isMounted]);
+
+  // Close editing mode and dropdowns on escape key or click outside
+  useEffect(() => {
+    const handleEscape = (e) => {
+      if (e.key === 'Escape') {
+        if (editingDevice) {
+          cancelEditing();
+        }
+        if (openDropdownId) {
+          setOpenDropdownId(null);
+        }
+      }
+    };
+
+    const handleClickOutside = (e) => {
+      // Don't process clicks immediately - wait for React to update state first
+      setTimeout(() => {
+        // Close dropdown if clicking outside
+        if (openDropdownId && !e.target.closest('.device-actions-dropdown')) {
+          setOpenDropdownId(null);
+        }
+        // Close editing mode if clicking outside the device row
+        if (editingDevice && !e.target.closest('.device-row-editing')) {
+          cancelEditing();
+        }
+      }, 0);
+    };
+
+    document.addEventListener('keydown', handleEscape);
+    document.addEventListener('mousedown', handleClickOutside);
+
+    return () => {
+      document.removeEventListener('keydown', handleEscape);
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [editingDevice, openDropdownId]);
 
   // Load saved devices on page load
   useEffect(() => {
@@ -341,21 +389,47 @@ export default function Devices() {
     try {
       setLoading(true);
       setError(null);
-      console.log('🔧 Starting bulk DEX collection...');
+      console.log('🔧 Starting bulk DEX collection for current company...');
 
-      const response = await axios.post('/api/dex/collect-bulk', {});
-
-      if (response.data.success) {
-        console.log('✅ Bulk DEX collection completed:', response.data);
-        // Refresh devices to show updated DEX info
-        await loadSavedDevices();
-      } else {
-        throw new Error(response.data.error || 'Bulk DEX collection failed');
+      // Get user's JWT token and company_id from Supabase client
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error('No active session found');
       }
+
+      const userCompanyId = session.user?.user_metadata?.company_id;
+      if (!userCompanyId) {
+        throw new Error('No company_id found for user');
+      }
+
+      console.log(`🎯 Collecting DEX for company: ${userCompanyId}`);
+
+      // Call the standalone DEX collection Edge Function with company_id
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+
+      const response = await axios.post(
+        `${supabaseUrl}/functions/v1/collect-dex-standalone`,
+        {
+          company_id: userCompanyId,
+          records_limit: 500  // Pull more records for manual collection
+        },
+        {
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      console.log('✅ Bulk DEX collection completed:', response.data);
+
+      // Refresh devices to show updated DEX info
+      await loadSavedDevices();
+
     } catch (error) {
       console.error('❌ Bulk DEX collection error:', error);
       console.error('❌ Error response data:', error.response?.data);
-      const errorDetails = error.response?.data?.stack || error.response?.data?.details || error.response?.data?.error || error.message;
+      const errorDetails = error.response?.data?.message || error.response?.data?.error || error.message;
       setError('Failed to run bulk DEX collection: ' + errorDetails);
     } finally {
       setLoading(false);
@@ -390,10 +464,42 @@ export default function Devices() {
     }
   };
 
+  // Helper function to get display value for location
+  const getLocationDisplay = (device) => {
+    if (typeof device.location === 'object' && device.location !== null) {
+      if (device.location.other) {
+        return device.location.other;
+      }
+      return device.location.optional || device.location.streetAddress || 'Unknown Location';
+    } else if (typeof device.location === 'string') {
+      return device.location;
+    }
+    return 'Unknown Location';
+  };
+
   const startEditing = (device) => {
     setEditingDevice(device.id);
+
+    // Determine location type and value
+    let locationType = 'optional';
+    let locationOther = '';
+
+    if (typeof device.location === 'object' && device.location !== null) {
+      // Check if location.other exists (custom location)
+      if (device.location.other) {
+        locationType = 'other';
+        locationOther = device.location.other;
+      }
+      // Otherwise default to optional (even if empty, user can select)
+    } else if (typeof device.location === 'string') {
+      // Legacy string location - treat as 'other'
+      locationType = 'other';
+      locationOther = device.location;
+    }
+
     setEditForm({
-      location: device.location?.optional || device.location || '',
+      location_type: locationType,
+      location_other: locationOther,
       machine_type: device.machine_type || 'unknown',
       cash_enabled: device.cash_enabled || false
     });
@@ -402,7 +508,8 @@ export default function Devices() {
   const cancelEditing = () => {
     setEditingDevice(null);
     setEditForm({
-      location: '',
+      location_type: 'optional',
+      location_other: '',
       machine_type: '',
       cash_enabled: false
     });
@@ -411,22 +518,50 @@ export default function Devices() {
   const collectDexForDevice = async (device) => {
     try {
       setLoading(true);
-      console.log(`Collecting DEX data for device ${device.case_serial}...`);
+      setOpenDropdownId(null); // Close dropdown
+      console.log(`🔧 Collecting DEX data for device ${device.case_serial}...`);
 
-      const response = await axios.post('/api/dex/collect', {
-        machineId: device.case_serial
-      });
-
-      if (response.data.success) {
-        console.log(`✅ Successfully collected ${response.data.recordsCount} DEX records for ${device.case_serial}`);
-        // Reload devices to show updated DEX information
-        await loadSavedDevices();
-      } else {
-        throw new Error(response.data.error || 'Failed to collect DEX data');
+      // Get user's JWT token and company_id from Supabase client
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error('No active session found');
       }
+
+      const userCompanyId = session.user?.user_metadata?.company_id;
+      if (!userCompanyId) {
+        throw new Error('No company_id found for user');
+      }
+
+      console.log(`🎯 Collecting DEX for machine: ${device.case_serial}`);
+
+      // Call the standalone DEX collection Edge Function with specific machine
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+
+      const response = await axios.post(
+        `${supabaseUrl}/functions/v1/collect-dex-standalone`,
+        {
+          company_id: userCompanyId,
+          case_serial: device.case_serial,
+          records_limit: 5  // Only get last 5 records for single device
+        },
+        {
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      console.log('✅ DEX collection completed:', response.data);
+
+      // Reload devices to show updated DEX info
+      await loadSavedDevices();
+
     } catch (error) {
-      console.error('Error collecting DEX data:', error);
-      setError(`Failed to collect DEX data: ${error.message}`);
+      console.error('❌ DEX collection error:', error);
+      console.error('❌ Error response data:', error.response?.data);
+      const errorDetails = error.response?.data?.message || error.response?.data?.error || error.message;
+      setError('Failed to collect DEX data: ' + errorDetails);
     } finally {
       setLoading(false);
     }
@@ -458,17 +593,23 @@ export default function Devices() {
     }
   };
 
-  const deleteDevice = async (deviceId) => {
-    if (!confirm('Are you sure you want to delete this device? This action cannot be undone.')) {
-      return;
-    }
+  const confirmDelete = (device) => {
+    setDeletingDevice(device);
+    setOpenDropdownId(null); // Close dropdown
+  };
 
+  const cancelDelete = () => {
+    setDeletingDevice(null);
+  };
+
+  const deleteDevice = async (deviceId) => {
     try {
       setLoading(true);
       const response = await axios.delete(`/api/devices/${deviceId}`);
 
       if (response.data.success) {
         console.log('Device deleted successfully');
+        setDeletingDevice(null);
         setEditingDevice(null);
         setEditForm({
           location: '',
@@ -548,6 +689,253 @@ export default function Devices() {
     }
   };
 
+  // Export devices to CSV
+  const handleExport = () => {
+    const devices = getFilteredAndSortedDevices();
+
+    // Create CSV content
+    const headers = ['Order', 'Case Serial', 'Machine Type', 'Machine Model', 'Cash Enabled'];
+    const rows = devices.map(device => [
+      device.display_order || '',
+      device.case_serial || '',
+      device.machine_type || '',
+      device.machine_model || '',
+      device.cash_enabled ? 'True' : 'False'
+    ]);
+
+    // Format CSV with special handling for Case Serial to prevent Excel from treating as number
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.map((cell, index) => {
+        // Force Case Serial (index 1) to be treated as text in Excel by prefixing with tab character
+        if (index === 1 && cell) {
+          return `"\t${cell}"`;
+        }
+        return `"${cell}"`;
+      }).join(','))
+    ].join('\n');
+
+    // Download CSV
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `devices-export-${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  // Import devices from CSV
+  const handleImport = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      try {
+        const text = e.target.result;
+        const lines = text.split('\n').filter(line => line.trim());
+
+        if (lines.length < 2) {
+          setError('CSV file is empty or invalid');
+          return;
+        }
+
+        // Fetch valid machine types from company settings (only active ones)
+        let validMachineTypes = ['unknown', 'beverage', 'food']; // Default fallback
+        try {
+          const settingsResponse = await fetch('/api/settings/company', {
+            credentials: 'include'
+          });
+          if (settingsResponse.ok) {
+            const settingsData = await settingsResponse.json();
+            if (settingsData.settings?.machineTypes) {
+              // Filter to only active types
+              validMachineTypes = settingsData.settings.machineTypes
+                .filter(type => typeof type === 'string' || type.active)
+                .map(type => typeof type === 'string' ? type : type.name);
+            }
+          }
+        } catch (err) {
+          console.warn('Failed to fetch machine types, using defaults:', err);
+        }
+
+        // Parse CSV (skip header)
+        const updates = [];
+        const notFound = [];
+        const changeTracker = [];
+        const invalidMachineTypes = new Set();
+
+        for (let i = 1; i < lines.length; i++) {
+          const line = lines[i];
+          // Split CSV by commas, but respect quoted fields
+          const fields = [];
+          let current = '';
+          let inQuotes = false;
+
+          for (let j = 0; j < line.length; j++) {
+            const char = line[j];
+            if (char === '"') {
+              inQuotes = !inQuotes;
+            } else if (char === ',' && !inQuotes) {
+              fields.push(current.replace(/^"|"$/g, '').trim());
+              current = '';
+            } else {
+              current += char;
+            }
+          }
+          fields.push(current.replace(/^"|"$/g, '').trim());
+
+          if (fields.length < 5) continue; // Need at least 5 columns
+
+          // Format: Order, Case Serial, Machine Type, Machine Model, Cash Enabled
+          const [order, caseSerial, machineType, machineModel, cashEnabled] = fields;
+
+          // Clean case serial: remove tab character, trim whitespace, and ensure it's not empty
+          const cleanCaseSerial = caseSerial.replace(/^\t/, '').trim();
+
+          if (!cleanCaseSerial) {
+            console.warn(`Row ${i + 1}: Empty case serial, skipping`);
+            continue;
+          }
+
+          // Find matching device by case serial (exact match)
+          const device = savedDevices.find(d => d.case_serial === cleanCaseSerial);
+
+          // Debug: log first few comparisons
+          if (i <= 3) {
+            console.log(`Row ${i}: CSV serial="${cleanCaseSerial}" Found=${!!device}`);
+            if (!device && savedDevices.length > 0) {
+              console.log(`  First DB serial="${savedDevices[0].case_serial}"`);
+            }
+          }
+
+          if (device) {
+            const update = {
+              id: device.id
+            };
+
+            // Only include fields that have values in the CSV
+            if (order && order.trim()) {
+              update.display_order = parseInt(order);
+            }
+
+            if (machineType && machineType.trim()) {
+              const trimmedType = machineType.trim().toLowerCase();
+              // Check if machine type is valid
+              if (validMachineTypes.includes(trimmedType)) {
+                update.machine_type = trimmedType;
+              } else {
+                // Track invalid machine type
+                invalidMachineTypes.add(trimmedType);
+              }
+            }
+
+            if (machineModel && machineModel.trim()) {
+              update.machine_model = machineModel.trim();
+            }
+
+            // Parse cash_enabled (case-insensitive true/false)
+            if (cashEnabled && cashEnabled.trim()) {
+              const cashLower = cashEnabled.toLowerCase();
+              update.cash_enabled = cashLower === 'true';
+            }
+
+            // Track changes for this device
+            const changes = [];
+            if (update.display_order !== undefined && update.display_order !== device.display_order) {
+              changes.push(`Order: ${device.display_order || 'none'} → ${update.display_order || 'none'}`);
+            }
+            if (update.machine_type !== undefined && update.machine_type !== device.machine_type) {
+              changes.push(`Type: ${device.machine_type || 'none'} → ${update.machine_type || 'none'}`);
+            }
+            if (update.machine_model !== undefined && update.machine_model !== device.machine_model) {
+              changes.push(`Model: ${device.machine_model || 'none'} → ${update.machine_model || 'none'}`);
+            }
+            if (update.cash_enabled !== undefined && update.cash_enabled !== device.cash_enabled) {
+              changes.push(`Cash: ${device.cash_enabled ? 'Yes' : 'No'} → ${update.cash_enabled ? 'Yes' : 'No'}`);
+            }
+
+            changeTracker.push({
+              caseSerial: cleanCaseSerial,
+              changes: changes
+            });
+
+            updates.push(update);
+          } else {
+            // Track case serials that don't match any device
+            notFound.push(cleanCaseSerial);
+          }
+        }
+
+        // Show warning if some case serials weren't found
+        if (notFound.length > 0) {
+          console.warn('Case serials not found in database:', notFound);
+          const shouldContinue = confirm(
+            `Warning: ${notFound.length} case serial(s) not found in database:\n${notFound.slice(0, 5).join(', ')}${notFound.length > 5 ? '...' : ''}\n\n` +
+            `Found ${updates.length} matching devices. Continue with import?`
+          );
+          if (!shouldContinue) {
+            return;
+          }
+        }
+
+        // Show warning if invalid machine types were found
+        if (invalidMachineTypes.size > 0) {
+          const invalidTypes = Array.from(invalidMachineTypes);
+          console.warn('Invalid machine types found:', invalidTypes);
+          const shouldContinue = confirm(
+            `Warning: ${invalidTypes.length} invalid machine type(s) found in CSV:\n${invalidTypes.join(', ')}\n\n` +
+            `Valid types: ${validMachineTypes.join(', ')}\n\n` +
+            `Rows with invalid machine types will be skipped. You can add missing types in Settings > Configuration.\n\n` +
+            `Continue with import?`
+          );
+          if (!shouldContinue) {
+            return;
+          }
+        }
+
+        if (updates.length === 0) {
+          setError('No matching devices found in CSV. Please check your case serials match the database.');
+          return;
+        }
+
+        // Update devices via API
+        const response = await axios.post('/api/machines/import-update', {
+          updates
+        });
+
+        if (response.data.success) {
+          setError(null);
+          // Reload devices to show updates
+          await loadSavedDevices();
+
+          // Show import results modal
+          const updated = changeTracker.filter(item => item.changes.length > 0);
+          const unchanged = changeTracker.filter(item => item.changes.length === 0);
+
+          setImportResults({
+            updated: updated,
+            unchanged: unchanged,
+            total: changeTracker.length
+          });
+          setShowImportModal(true);
+        } else {
+          throw new Error('Failed to import');
+        }
+      } catch (error) {
+        console.error('Import error:', error);
+        setError('Failed to import CSV file: ' + error.message);
+      }
+    };
+
+    reader.readAsText(file);
+    // Reset input so same file can be selected again
+    event.target.value = '';
+  };
+
   // Filter and sort devices
   const getFilteredAndSortedDevices = () => {
     let filtered = [...savedDevices];
@@ -582,7 +970,9 @@ export default function Devices() {
       filtered = filtered.filter(d =>
         d.case_serial?.toLowerCase().includes(searchLower) ||
         (typeof d.location === 'string' && d.location.toLowerCase().includes(searchLower)) ||
-        d.location?.optional?.toLowerCase().includes(searchLower)
+        d.location?.optional?.toLowerCase().includes(searchLower) ||
+        d.location?.streetAddress?.toLowerCase().includes(searchLower) ||
+        d.location?.other?.toLowerCase().includes(searchLower)
       );
     }
 
@@ -689,7 +1079,7 @@ export default function Devices() {
             disabled={sortBy !== 'order'}
           >
             {devices.map((device, index) => (
-              <SortableDeviceRow key={device.id} device={device}>
+              <SortableDeviceRow key={device.id} device={device} isEditing={editingDevice === device.id}>
                 {({ dragHandleProps }) => (
                   <>
               {/* Mobile Layout */}
@@ -729,16 +1119,33 @@ export default function Devices() {
                   <div>
                     <span className="font-medium text-gray-700">Location:</span>
                     {editingDevice === device.id ? (
-                      <input
-                        type="text"
-                        value={editForm.location}
-                        onChange={(e) => setEditForm({...editForm, location: e.target.value})}
-                        className="w-full border border-gray-300 rounded px-2 py-1 text-xs mt-1"
-                        placeholder="Enter location"
-                      />
+                      <div className="space-y-1 mt-1">
+                        <select
+                          value={editForm.location_type}
+                          onChange={(e) => setEditForm({...editForm, location_type: e.target.value})}
+                          className="w-full border border-gray-300 rounded px-2 py-1 text-xs"
+                        >
+                          {device.location?.streetAddress && (
+                            <option value="streetAddress">{device.location.streetAddress}</option>
+                          )}
+                          {device.location?.optional && (
+                            <option value="optional">{device.location.optional}</option>
+                          )}
+                          <option value="other">Other (Custom)</option>
+                        </select>
+                        {editForm.location_type === 'other' && (
+                          <input
+                            type="text"
+                            value={editForm.location_other}
+                            onChange={(e) => setEditForm({...editForm, location_other: e.target.value})}
+                            className="w-full border border-gray-300 rounded px-2 py-1 text-xs"
+                            placeholder="Enter custom location"
+                          />
+                        )}
+                      </div>
                     ) : (
                       <div className="text-gray-900 break-words">
-                        {device.location?.optional || device.location || 'Unknown Location'}
+                        {getLocationDisplay(device)}
                       </div>
                     )}
                   </div>
@@ -967,10 +1374,10 @@ export default function Devices() {
                   </div>
                 )}
 
-                {/* Mobile Edit Actions - Hidden on Mobile */}
-                <div className="hidden sm:flex justify-end space-x-2">
+                {/* Mobile Edit Actions */}
+                <div className="hidden sm:flex justify-end">
                   {editingDevice === device.id ? (
-                    <>
+                    <div className="flex space-x-2">
                       <button
                         onClick={() => saveDeviceEdit(device.id)}
                         disabled={loading}
@@ -984,24 +1391,48 @@ export default function Devices() {
                       >
                         Cancel
                       </button>
-                    </>
+                    </div>
                   ) : (
-                    <>
+                    <div className="relative device-actions-dropdown">
                       <button
-                        onClick={() => collectDexForDevice(device)}
-                        disabled={loading}
-                        className="bg-purple-600 hover:bg-purple-700 text-white px-2 py-1 rounded text-xs disabled:opacity-50"
-                        title="Collect DEX data for this device"
+                        onClick={() => setOpenDropdownId(openDropdownId === device.id ? null : device.id)}
+                        className="text-gray-600 hover:text-blue-600 hover:bg-gray-100 p-1 rounded"
+                        title="Actions"
                       >
-                        📊 DEX
+                        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                          <circle cx="12" cy="5" r="1.5"/>
+                          <circle cx="12" cy="12" r="1.5"/>
+                          <circle cx="12" cy="19" r="1.5"/>
+                        </svg>
                       </button>
-                      <button
-                        onClick={() => startEditing(device)}
-                        className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-xs"
-                      >
-                        Edit
-                      </button>
-                    </>
+
+                      {openDropdownId === device.id && (
+                        <div className="absolute right-0 mt-1 w-32 bg-white border border-gray-200 rounded shadow-lg z-10">
+                          <button
+                            onClick={() => {
+                              startEditing(device);
+                              setOpenDropdownId(null);
+                            }}
+                            className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => collectDexForDevice(device)}
+                            disabled={loading}
+                            className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 disabled:opacity-50"
+                          >
+                            Get DEX
+                          </button>
+                          <button
+                            onClick={() => confirmDelete(device)}
+                            className="w-full text-left px-4 py-2 text-sm hover:bg-red-50 text-red-600"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   )}
                 </div>
               </div>
@@ -1049,16 +1480,33 @@ export default function Devices() {
                 {/* Location */}
                 <div>
                   {editingDevice === device.id ? (
-                    <input
-                      type="text"
-                      value={editForm.location}
-                      onChange={(e) => setEditForm({...editForm, location: e.target.value})}
-                      className="w-full border border-gray-300 rounded px-2 py-1 text-sm"
-                      placeholder="Enter location"
-                    />
+                    <div className="space-y-1">
+                      <select
+                        value={editForm.location_type}
+                        onChange={(e) => setEditForm({...editForm, location_type: e.target.value})}
+                        className="w-full border border-gray-300 rounded px-2 py-1 text-sm"
+                      >
+                        {device.location?.streetAddress && (
+                          <option value="streetAddress">{device.location.streetAddress}</option>
+                        )}
+                        {device.location?.optional && (
+                          <option value="optional">{device.location.optional}</option>
+                        )}
+                        <option value="other">Other (Custom)</option>
+                      </select>
+                      {editForm.location_type === 'other' && (
+                        <input
+                          type="text"
+                          value={editForm.location_other}
+                          onChange={(e) => setEditForm({...editForm, location_other: e.target.value})}
+                          className="w-full border border-gray-300 rounded px-2 py-1 text-sm"
+                          placeholder="Enter custom location"
+                        />
+                      )}
+                    </div>
                   ) : (
                     <div className="text-gray-900">
-                      {device.location?.optional || device.location || 'Unknown Location'}
+                      {getLocationDisplay(device)}
                     </div>
                   )}
                   <div className="text-xs text-gray-500">
@@ -1222,27 +1670,48 @@ export default function Devices() {
                       >
                         Cancel
                       </button>
-                      <button
-                        onClick={() => deleteDevice(device.id)}
-                        disabled={loading}
-                        className="bg-red-600 hover:bg-red-700 text-white px-2 py-1 rounded text-xs disabled:opacity-50"
-                        title="Delete device"
-                      >
-                        Delete
-                      </button>
                     </div>
                   ) : (
-                    <button
-                      onClick={() => startEditing(device)}
-                      className="text-gray-600 hover:text-blue-600 hover:bg-gray-100 p-1 rounded"
-                      title="Edit device"
-                    >
-                      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                        <circle cx="12" cy="5" r="1.5"/>
-                        <circle cx="12" cy="12" r="1.5"/>
-                        <circle cx="12" cy="19" r="1.5"/>
-                      </svg>
-                    </button>
+                    <div className="relative device-actions-dropdown">
+                      <button
+                        onClick={() => setOpenDropdownId(openDropdownId === device.id ? null : device.id)}
+                        className="text-gray-600 hover:text-blue-600 hover:bg-gray-100 p-1 rounded"
+                        title="Actions"
+                      >
+                        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                          <circle cx="12" cy="5" r="1.5"/>
+                          <circle cx="12" cy="12" r="1.5"/>
+                          <circle cx="12" cy="19" r="1.5"/>
+                        </svg>
+                      </button>
+
+                      {openDropdownId === device.id && (
+                        <div className="absolute right-0 mt-1 w-32 bg-white border border-gray-200 rounded shadow-lg z-10">
+                          <button
+                            onClick={() => {
+                              startEditing(device);
+                              setOpenDropdownId(null);
+                            }}
+                            className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => collectDexForDevice(device)}
+                            disabled={loading}
+                            className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 disabled:opacity-50"
+                          >
+                            Get DEX
+                          </button>
+                          <button
+                            onClick={() => confirmDelete(device)}
+                            className="w-full text-left px-4 py-2 text-sm hover:bg-red-50 text-red-600"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   )}
                 </div>
               </div>
@@ -1745,7 +2214,7 @@ export default function Devices() {
                               </div>
                               {/* Row 1, Col 2: Location */}
                               <div className="text-red-100 text-xs sm:text-sm text-right">
-                                {typeof device.location === 'string' ? device.location : device.location?.optional || 'Unknown'}
+                                {getLocationDisplay(device)}
                               </div>
                               {/* Row 2, Col 1: Error Count */}
                               <div>
@@ -1998,6 +2467,31 @@ export default function Devices() {
               )}
             </div>
 
+            {/* Export/Import Actions */}
+            <div className="mb-4 flex gap-2 justify-end">
+              <button
+                onClick={handleExport}
+                className="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 flex items-center gap-2"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                Export CSV
+              </button>
+              <label className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 flex items-center gap-2 cursor-pointer">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                </svg>
+                Import CSV
+                <input
+                  type="file"
+                  accept=".csv"
+                  onChange={handleImport}
+                  className="hidden"
+                />
+              </label>
+            </div>
+
             {formatSavedDevicesData(getFilteredAndSortedDevices())}
           </div>
         )}
@@ -2014,7 +2508,11 @@ export default function Devices() {
               <div className="ml-3">
                 <h3 className="text-sm font-medium text-yellow-800">DEX Credentials Required</h3>
                 <div className="mt-2 text-sm text-yellow-700">
-                  Please configure your DEX credentials in Settings before accessing device features.
+                  Please configure your DEX credentials in{' '}
+                  <a href="/settings?tab=dex" className="font-medium text-yellow-800 underline hover:text-yellow-900">
+                    Settings → DEX Integration
+                  </a>
+                  {' '}before accessing device features.
                 </div>
               </div>
             </div>
@@ -2038,7 +2536,7 @@ export default function Devices() {
                   <li>Connect to your DEX platform using your saved credentials</li>
                   <li>Fetch all device information</li>
                   <li>Save devices to the database for faster access</li>
-                  <li>Start automatic DEX data collection every 5 minutes</li>
+                  <li>Start automatic DEX data collection every 20 minutes</li>
                 </ul>
               </div>
               <div className="space-y-3">
@@ -2088,6 +2586,127 @@ export default function Devices() {
                       <div><span className="font-medium">Uptime:</span> 24h 15m</div>
                     </div>
                   </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Import Results Modal */}
+        {showImportModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[80vh] overflow-hidden">
+              <div className="p-6 border-b border-gray-200">
+                <div className="flex justify-between items-center">
+                  <h3 className="text-xl font-semibold text-gray-900">Import Results</h3>
+                  <button
+                    onClick={() => setShowImportModal(false)}
+                    className="text-gray-400 hover:text-gray-600"
+                  >
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+                <div className="mt-2 text-sm text-gray-600">
+                  Processed {importResults.total} device{importResults.total !== 1 ? 's' : ''}
+                </div>
+              </div>
+
+              <div className="p-6 overflow-y-auto max-h-[calc(80vh-180px)]">
+                {/* Updated Devices */}
+                {importResults.updated.length > 0 && (
+                  <div className="mb-6">
+                    <h4 className="text-lg font-medium text-green-700 mb-3 flex items-center">
+                      <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                      Updated ({importResults.updated.length})
+                    </h4>
+                    <div className="space-y-3">
+                      {importResults.updated.map((item, index) => (
+                        <div key={index} className="bg-green-50 border border-green-200 rounded-lg p-3">
+                          <div className="font-medium text-gray-900 mb-1">{item.caseSerial}</div>
+                          <ul className="text-sm text-gray-700 space-y-1">
+                            {item.changes.map((change, idx) => (
+                              <li key={idx} className="flex items-start">
+                                <span className="text-green-600 mr-2">•</span>
+                                <span>{change}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Unchanged Devices */}
+                {importResults.unchanged.length > 0 && (
+                  <div>
+                    <h4 className="text-lg font-medium text-gray-700 mb-3 flex items-center">
+                      <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      No Changes ({importResults.unchanged.length})
+                    </h4>
+                    <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+                      <div className="text-sm text-gray-700">
+                        {importResults.unchanged.map((item, index) => (
+                          <span key={index}>
+                            {item.caseSerial}
+                            {index < importResults.unchanged.length - 1 ? ', ' : ''}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* No devices processed */}
+                {importResults.total === 0 && (
+                  <div className="text-center py-8 text-gray-500">
+                    No devices were processed
+                  </div>
+                )}
+              </div>
+
+              <div className="p-6 border-t border-gray-200 bg-gray-50">
+                <button
+                  onClick={() => setShowImportModal(false)}
+                  className="w-full bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Delete Confirmation Modal */}
+        {deletingDevice && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg max-w-md w-full">
+              <div className="p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">Confirm Delete</h3>
+                <p className="text-gray-600 mb-4">
+                  Are you sure you want to delete device <strong>{deletingDevice.case_serial}</strong>?
+                  This action cannot be undone.
+                </p>
+                <div className="flex justify-end space-x-3">
+                  <button
+                    onClick={cancelDelete}
+                    className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => deleteDevice(deletingDevice.id)}
+                    disabled={loading}
+                    className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50"
+                  >
+                    Delete
+                  </button>
                 </div>
               </div>
             </div>

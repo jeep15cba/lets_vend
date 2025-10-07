@@ -4,7 +4,7 @@ import { useAuth } from '../contexts/AuthContext'
 
 export default function Navigation() {
   const router = useRouter()
-  const { user, signOut, hasCredentials } = useAuth()
+  const { user, signOut, hasCredentials, isImpersonating, stopImpersonating } = useAuth()
 
   console.log('🔧 Navigation: hasCredentials =', hasCredentials, 'user =', !!user)
 
@@ -22,10 +22,35 @@ export default function Navigation() {
   const navigation = hasCredentials ? [...protectedNavigation, ...baseNavigation] : baseNavigation
 
   return (
-    <nav className="bg-white shadow">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between h-16">
-          <div className="flex">
+    <>
+      {/* Impersonation Banner - Sticky */}
+      {isImpersonating && (
+        <div className="sticky top-0 z-50 bg-yellow-400 border-b-2 border-yellow-600 shadow-md">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <svg className="h-5 w-5 text-yellow-900 mr-2 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                <span className="text-yellow-900 font-semibold text-sm sm:text-base">
+                  ⚠️ ADMIN MODE: Viewing another user's account
+                </span>
+              </div>
+              <button
+                onClick={stopImpersonating}
+                className="bg-yellow-900 hover:bg-yellow-800 text-white px-3 py-1 rounded text-sm font-medium transition-colors flex-shrink-0"
+              >
+                Exit Impersonation
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <nav className={`${isImpersonating ? 'bg-yellow-50' : 'bg-white'} shadow`}>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between h-16">
+            <div className="flex">
             <Link href={hasCredentials ? "/devices" : "/settings"} className="flex-shrink-0 flex items-center">
               <svg className="h-8 w-8 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
@@ -69,7 +94,7 @@ export default function Navigation() {
                 )
               })}
             </div>
-          </div>
+            </div>
           <div className="hidden sm:ml-6 sm:flex sm:items-center">
             <div className="ml-3 relative">
               <div className="flex items-center space-x-4">
@@ -88,5 +113,6 @@ export default function Navigation() {
         </div>
       </div>
     </nav>
+    </>
   )
 }

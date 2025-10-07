@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import { useRouter } from 'next/router'
 import { supabase } from '../lib/supabase/client'
+import axios from 'axios'
 
 const AuthContext = createContext({})
 
@@ -37,6 +38,21 @@ export const AuthProvider = ({ children }) => {
     console.log('🔧 checkCredentialsStatus: Reading from user metadata:', credentialsFromMetadata)
     setHasCredentials(credentialsFromMetadata)
   }
+
+  // Set up axios interceptor for impersonation
+  useEffect(() => {
+    const interceptor = axios.interceptors.request.use((config) => {
+      if (isImpersonating && impersonatedCompanyId) {
+        config.headers['x-impersonate-company-id'] = impersonatedCompanyId
+        console.log('🔧 Adding impersonation header:', impersonatedCompanyId)
+      }
+      return config
+    })
+
+    return () => {
+      axios.interceptors.request.eject(interceptor)
+    }
+  }, [isImpersonating, impersonatedCompanyId])
 
   useEffect(() => {
 
@@ -201,6 +217,8 @@ export const AuthProvider = ({ children }) => {
     console.log('🔧 Stopping impersonation')
     setImpersonatedCompanyId(null)
     setIsImpersonating(false)
+    // Reload the page to fetch data with admin's own company context
+    window.location.reload()
   }
 
   // Return the impersonated company ID if impersonating, otherwise return actual company ID

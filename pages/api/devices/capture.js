@@ -1,4 +1,4 @@
-import { getUserCompanyContext, createClient } from '../../../lib/supabase/server'
+import { getUserCompanyContext, createServiceClient } from '../../../lib/supabase/server'
 export const runtime = 'edge'
 import { getUserDexCredentials } from '../../../lib/user-credentials'
 
@@ -17,25 +17,30 @@ export default async function handler(req) {
 
     const userEmail = user.email
     console.log('🔧 Using authenticated user for device capture:', userEmail)
+    console.log('🔧 Company ID from getUserCompanyContext:', companyId)
 
     console.log('🔧 Starting device capture process...')
 
     // Step 1: Authenticate with Cantaloupe using working auth endpoint
     console.log('Authenticating with DEX platform...')
 
-    const baseUrl = req.headers.origin || process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_LOCAL_URL || 'http://localhost:3000'
+    const baseUrl = req.headers.get('origin') || process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_LOCAL_URL || 'http://localhost:3000'
+    const cookieHeader = req.headers.get('cookie') || ''
+    console.log('🔧 Forwarding cookies to /api/cantaloupe/auth:', cookieHeader ? 'Present' : 'Missing')
+
     const authResponse = await fetch(`${baseUrl}/api/cantaloupe/auth`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         // Forward user cookies for authentication
-        'Cookie': req.headers.cookie || ''
+        'Cookie': cookieHeader
       }
     })
 
     const authData = await authResponse.json()
+    console.log('🔍 Auth response from /api/cantaloupe/auth:', authData)
     if (!authData.success) {
-      throw new Error('Authentication failed with Cantaloupe')
+      throw new Error(`Authentication failed with Cantaloupe: ${authData.error || 'Unknown error'}`)
     }
 
     const allCookies = authData.cookies
@@ -134,8 +139,25 @@ export default async function handler(req) {
     }
 
     // Step 3: Process and save devices to Supabase
-    // Create Supabase client with RLS
-    const { supabase } = createClient(req)
+    // Use Service Role client for device insertion (app-initiated operation on behalf of user)
+    // Similar to signup - user explicitly triggers device import from external source
+    const { supabase } = createServiceClient()
+    console.log('🔧 Using Service Role client for device insertion (bypasses RLS)')
+
+    // Get existing machines for this company to determine starting display_order
+    const { data: existingMachines, error: fetchError } = await supabase
+      .from('machines')
+      .select('display_order')
+      .eq('company_id', companyId)
+      .order('display_order', { ascending: false })
+      .limit(1)
+
+    let nextDisplayOrder = 1
+    if (existingMachines && existingMachines.length > 0 && existingMachines[0].display_order) {
+      nextDisplayOrder = existingMachines[0].display_order + 1
+    }
+
+    console.log(`Starting display_order at: ${nextDisplayOrder}`)
 
     const processedDevices = []
 
@@ -163,10 +185,11 @@ export default async function handler(req) {
         company_id: companyId,
         location: locationData,
         machine_model: device.vmName ? device.vmName.replace(/<[^>]*>/g, '') : 'Unknown Model', // Strip HTML tags
-        machine_type: 'snack', // Default to snack, could be enhanced later
+        machine_type: 'unknown', // Default to unknown (valid values: unknown, beverage, food)
         manufacturer: 'Cantaloupe', // Default manufacturer
         firmware_version: device.firmwareStr || null,
         status: device.state === 'approved' ? 'active' : 'inactive',
+        display_order: nextDisplayOrder, // Set sequential display order
         notes: JSON.stringify({
           lastSeen: device.lastSeen,
           temperature: device.temp && device.temp !== "<h5><span class=\"badge text-bg-danger\">No Probe</span></h5>" ? device.temp : null,
@@ -184,16 +207,18 @@ export default async function handler(req) {
       }
 
       processedDevices.push(processedDevice)
+      nextDisplayOrder++ // Increment for next device
     }
 
     console.log(`Processed ${processedDevices.length} devices`)
 
     // Save to Supabase machines table (using client created earlier)
+    console.log('🔧 Sample device data being inserted:', processedDevices[0])
 
     const { data, error } = await supabase
       .from('machines')
       .upsert(processedDevices, {
-        onConflict: 'case_serial'
+        onConflict: 'company_id,case_serial'
       })
 
     if (error) {

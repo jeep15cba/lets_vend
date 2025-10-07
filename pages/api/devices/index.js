@@ -1,4 +1,4 @@
-import { getUserCompanyContext, createClient } from '../../../lib/supabase/server'
+import { getUserCompanyContext, createClient, createServiceClient } from '../../../lib/supabase/server'
 export const runtime = 'edge'
 
 export default async function handler(req) {
@@ -16,8 +16,12 @@ export default async function handler(req) {
     if (req.method === 'GET') {
       // Get saved devices for the user
       try {
-        // Fetch from Supabase machines table with RLS
-        const { supabase } = createClient(req)
+        // Check if admin is impersonating
+        const impersonatedCompanyId = req.headers.get('x-impersonate-company-id')
+        const isImpersonating = impersonatedCompanyId && role === 'admin'
+
+        // Use Service Role when impersonating to bypass RLS
+        const { supabase } = isImpersonating ? createServiceClient() : createClient(req)
 
         const { data: machines, error } = await supabase
           .from('machines')

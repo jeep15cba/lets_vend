@@ -1,12 +1,19 @@
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/router'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase/client'
 import Navigation from './Navigation'
 import axios from 'axios'
 
 export default function Settings() {
+  const router = useRouter()
   const { user, signOut, isAdmin, isImpersonating, impersonateCompany, stopImpersonating, actualCompanyId, companyId } = useAuth()
-  const [activeTab, setActiveTab] = useState('profile')
+
+  // Initialize activeTab from URL query parameter or default to 'profile'
+  const [activeTab, setActiveTab] = useState(() => {
+    const tab = router.query.tab
+    return tab === 'dex' ? 'dex' : tab || 'profile'
+  })
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState({ type: '', text: '' })
 
@@ -47,11 +54,30 @@ export default function Settings() {
   const [tiers, setTiers] = useState([])
   const [loadingSubscription, setLoadingSubscription] = useState(false)
 
+  // Machine types configuration
+  const [machineTypes, setMachineTypes] = useState([
+    { name: 'unknown', active: true },
+    { name: 'beverage', active: true },
+    { name: 'food', active: true }
+  ])
+  const [newMachineType, setNewMachineType] = useState('')
+  const [editingType, setEditingType] = useState(null)
+  const [machineTypeUsage, setMachineTypeUsage] = useState({})
+
+  // Update active tab when URL query parameter changes
+  useEffect(() => {
+    if (router.query.tab) {
+      setActiveTab(router.query.tab)
+    }
+  }, [router.query.tab])
+
   useEffect(() => {
     // Load user profile data from API to get complete information including company name
     loadProfileData()
     // Load existing DEX credentials
     loadDexCredentials()
+    // Load company settings including machine types
+    loadCompanySettings()
   }, [user?.id]) // Only re-run when user ID changes, not the whole user object
 
   const loadProfileData = async () => {
@@ -141,6 +167,76 @@ export default function Settings() {
       }
     } catch (error) {
       console.error('Error loading DEX credentials:', error)
+    }
+  }
+
+  const loadCompanySettings = async () => {
+    try {
+      const response = await fetch('/api/settings/company', {
+        credentials: 'include'
+      })
+      if (response.ok) {
+        const data = await response.json()
+        if (data.settings?.machineTypes) {
+          // Convert old format (array of strings) to new format (array of objects)
+          const types = Array.isArray(data.settings.machineTypes)
+            ? data.settings.machineTypes.map(type =>
+                typeof type === 'string'
+                  ? { name: type, active: true }
+                  : type
+              )
+            : []
+          setMachineTypes(types)
+        }
+      }
+    } catch (error) {
+      console.error('Error loading company settings:', error)
+    }
+  }
+
+  const loadMachineTypeUsage = async () => {
+    try {
+      const response = await fetch('/api/machines/type-usage', {
+        credentials: 'include'
+      })
+      if (response.ok) {
+        const data = await response.json()
+        setMachineTypeUsage(data.usage || {})
+      } else {
+        console.warn('Failed to load machine type usage, will show 0 for all types')
+        setMachineTypeUsage({})
+      }
+    } catch (error) {
+      console.error('Error loading machine type usage:', error)
+      setMachineTypeUsage({})
+    }
+  }
+
+  const saveCompanySettings = async (newSettings) => {
+    try {
+      const response = await fetch('/api/settings/company', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          settings: {
+            machineTypes: newSettings.machineTypes || machineTypes
+          }
+        })
+      })
+
+      if (response.ok) {
+        return true
+      } else {
+        const error = await response.json()
+        console.error('Error saving settings:', error)
+        return false
+      }
+    } catch (error) {
+      console.error('Error saving company settings:', error)
+      return false
     }
   }
 
@@ -247,7 +343,10 @@ export default function Settings() {
       if (response.ok) {
         setMessage({ type: 'success', text: 'DEX credentials saved successfully!' })
         setDexCredentials(prev => ({ ...prev, isConfigured: true, password: '' }))
-        // Navigation will update automatically when user session refreshes with new metadata
+
+        // Refresh the session to pick up updated user metadata
+        // This will trigger AuthContext's onAuthStateChange listener
+        await supabase.auth.refreshSession()
       } else {
         const error = await response.json()
         throw new Error(error.message || 'Failed to save credentials')
@@ -353,6 +452,13 @@ export default function Settings() {
     }
   }
 
+  // Load machine type usage when Configuration tab is active
+  useEffect(() => {
+    if (activeTab === 'configuration') {
+      loadMachineTypeUsage()
+    }
+  }, [activeTab])
+
   // Load users when Admin tab is active
   useEffect(() => {
     if (activeTab === 'admin' && isAdmin) {
@@ -392,8 +498,9 @@ export default function Settings() {
 
   const tabs = [
     { id: 'profile', name: 'Profile', icon: 'user' },
-    { id: 'subscription', name: 'Subscription', icon: 'credit-card' },
+    { id: 'configuration', name: 'Configuration', icon: 'cog' },
     { id: 'dex', name: 'DEX Integration', icon: 'server' },
+    { id: 'subscription', name: 'Subscription', icon: 'credit-card' },
     { id: 'security', name: 'Security', icon: 'shield' },
     ...(isAdmin ? [{ id: 'admin', name: 'Admin', icon: 'admin' }] : [])
   ]
@@ -695,14 +802,14 @@ export default function Settings() {
                       <input
                         type="password"
                         id="dexPassword"
-                        placeholder={dexCredentials.isConfigured ? "••••••••" : "Enter password"}
+                        placeholder={dexCredentials.isConfigured ? "••••••••••••" : "Enter password"}
                         value={dexCredentials.password}
                         onChange={(e) => setDexCredentials({...dexCredentials, password: e.target.value})}
                         className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                        required={!dexCredentials.isConfigured}
+                        required
                       />
-                      {dexCredentials.isConfigured && (
-                        <p className="mt-1 text-xs text-gray-500">Leave blank to keep current password.</p>
+                      {dexCredentials.isConfigured && !dexCredentials.password && (
+                        <p className="mt-1 text-xs text-gray-500">Password is saved. Enter to update.</p>
                       )}
                     </div>
 
@@ -737,7 +844,7 @@ export default function Settings() {
                         disabled={loading}
                         className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
                       >
-                        {loading ? 'Saving...' : 'Save Credentials'}
+                        {loading ? 'Saving...' : (dexCredentials.isConfigured ? 'Update Credentials' : 'Save Credentials')}
                       </button>
                     </div>
                   </form>
@@ -1027,6 +1134,167 @@ export default function Settings() {
               </div>
             )}
 
+            {activeTab === 'configuration' && (
+              <div className="bg-white shadow rounded-lg">
+                <div className="px-4 py-5 sm:p-6">
+                  <h3 className="text-lg leading-6 font-medium text-gray-900">Configuration</h3>
+                  <p className="mt-1 text-sm text-gray-500">
+                    Manage system configuration options for your vending machines.
+                  </p>
+
+                  {/* Machine Types Section */}
+                  <div className="mt-8">
+                    <h4 className="text-base font-medium text-gray-900">Machine Types</h4>
+                    <p className="mt-1 text-sm text-gray-500">
+                      Define the machine types available for your vending machines. These types will be used in CSV imports and exports.
+                      Inactive types cannot be used in new imports but existing machines will retain their type.
+                    </p>
+
+                    <div className="mt-4">
+                      {/* Machine Types Table */}
+                      <div className="overflow-hidden shadow ring-1 ring-black ring-opacity-5 rounded-lg mb-4">
+                        <table className="min-w-full divide-y divide-gray-300">
+                          <thead className="bg-gray-50">
+                            <tr>
+                              <th scope="col" className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900">Type Name</th>
+                              <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Status</th>
+                              <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Machines Using</th>
+                              <th scope="col" className="relative py-3.5 pl-3 pr-4">
+                                <span className="sr-only">Actions</span>
+                              </th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-gray-200 bg-white">
+                            {machineTypes.map((type) => {
+                              const count = machineTypeUsage[type.name] || 0
+                              const isDefaultType = type.name === 'unknown'
+                              const canDeactivate = !isDefaultType && (count === 0 || type.active === false)
+
+                              return (
+                                <tr key={type.name}>
+                                  <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900">
+                                    {type.name}
+                                    {isDefaultType && (
+                                      <span className="ml-2 text-xs text-gray-500">(default)</span>
+                                    )}
+                                  </td>
+                                  <td className="whitespace-nowrap px-3 py-4 text-sm">
+                                    {type.active ? (
+                                      <span className="inline-flex items-center rounded-md bg-green-50 px-2 py-1 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20">
+                                        Active
+                                      </span>
+                                    ) : (
+                                      <span className="inline-flex items-center rounded-md bg-gray-50 px-2 py-1 text-xs font-medium text-gray-600 ring-1 ring-inset ring-gray-500/10">
+                                        Inactive
+                                      </span>
+                                    )}
+                                  </td>
+                                  <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                                    {count} {count === 1 ? 'machine' : 'machines'}
+                                  </td>
+                                  <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm">
+                                    <button
+                                      onClick={async () => {
+                                        const newTypes = machineTypes.map(t =>
+                                          t.name === type.name ? { ...t, active: !t.active } : t
+                                        )
+                                        setMachineTypes(newTypes)
+                                        const saved = await saveCompanySettings({ machineTypes: newTypes })
+                                        if (saved) {
+                                          setMessage({ type: 'success', text: `Machine type "${type.name}" ${type.active ? 'deactivated' : 'activated'}` })
+                                          await loadMachineTypeUsage() // Refresh counts
+                                        } else {
+                                          setMessage({ type: 'error', text: 'Failed to save settings' })
+                                          setMachineTypes(machineTypes) // Revert on error
+                                        }
+                                      }}
+                                      disabled={!canDeactivate && type.active}
+                                      className="text-indigo-600 hover:text-indigo-900 disabled:text-gray-400 disabled:cursor-not-allowed font-medium"
+                                      title={
+                                        isDefaultType && type.active
+                                          ? 'Cannot deactivate: This is the default type used during data capture'
+                                          : !canDeactivate && type.active
+                                          ? `Cannot deactivate: ${count} machines currently using this type`
+                                          : ''
+                                      }
+                                    >
+                                      {type.active ? 'Deactivate' : 'Activate'}
+                                    </button>
+                                  </td>
+                                </tr>
+                              )
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+
+                      {/* Add New Machine Type */}
+                      <div className="border-t border-gray-200 pt-4">
+                        <h5 className="text-sm font-medium text-gray-900 mb-2">Add New Machine Type</h5>
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            value={newMachineType}
+                            onChange={(e) => setNewMachineType(e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, ''))}
+                            placeholder="Enter new machine type (e.g., snack, combo)"
+                            className="flex-1 shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                            onKeyPress={async (e) => {
+                              if (e.key === 'Enter') {
+                                e.preventDefault()
+                                const exists = machineTypes.some(t => t.name === newMachineType)
+                                if (newMachineType && !exists) {
+                                  const newTypes = [...machineTypes, { name: newMachineType, active: true }]
+                                  setMachineTypes(newTypes)
+                                  const saved = await saveCompanySettings({ machineTypes: newTypes })
+                                  if (saved) {
+                                    setNewMachineType('')
+                                    setMessage({ type: 'success', text: `Machine type "${newMachineType}" added` })
+                                    await loadMachineTypeUsage()
+                                  } else {
+                                    setMessage({ type: 'error', text: 'Failed to save settings' })
+                                    setMachineTypes(machineTypes) // Revert on error
+                                  }
+                                } else if (exists) {
+                                  setMessage({ type: 'error', text: `Machine type "${newMachineType}" already exists` })
+                                }
+                              }
+                            }}
+                          />
+                          <button
+                            onClick={async () => {
+                              const exists = machineTypes.some(t => t.name === newMachineType)
+                              if (newMachineType && !exists) {
+                                const newTypes = [...machineTypes, { name: newMachineType, active: true }]
+                                setMachineTypes(newTypes)
+                                const saved = await saveCompanySettings({ machineTypes: newTypes })
+                                if (saved) {
+                                  setNewMachineType('')
+                                  setMessage({ type: 'success', text: `Machine type "${newMachineType}" added` })
+                                  await loadMachineTypeUsage()
+                                } else {
+                                  setMessage({ type: 'error', text: 'Failed to save settings' })
+                                  setMachineTypes(machineTypes) // Revert on error
+                                }
+                              } else if (exists) {
+                                setMessage({ type: 'error', text: `Machine type "${newMachineType}" already exists` })
+                              }
+                            }}
+                          disabled={!newMachineType}
+                          className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                        >
+                          Add Type
+                        </button>
+                        <p className="mt-2 text-xs text-gray-500">
+                          Note: Machine types are lowercase alphanumeric with hyphens/underscores only.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            )}
+
             {activeTab === 'admin' && isAdmin && (
               <div className="bg-white shadow rounded-lg">
                 <div className="px-4 py-5 sm:p-6">
@@ -1148,10 +1416,15 @@ function TabIcon({ icon, className }) {
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
       </svg>
     ),
-    admin: (
+    cog: (
       <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+      </svg>
+    ),
+    admin: (
+      <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
       </svg>
     )
   }

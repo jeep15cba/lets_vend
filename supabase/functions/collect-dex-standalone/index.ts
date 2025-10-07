@@ -332,7 +332,7 @@ async function authenticate(username: string, password: string, siteUrl: string)
 }
 
 // Fetch DEX metadata list
-async function fetchDexMetadata(cookies: string, siteUrl: string): Promise<{ data: any[], csrfToken: string | null }> {
+async function fetchDexMetadata(cookies: string, siteUrl: string, caseSerial: string | null = null): Promise<{ data: any[], csrfToken: string | null }> {
   try {
     console.log('  → Fetching DEX metadata...')
 
@@ -450,7 +450,7 @@ async function fetchDexMetadata(cookies: string, siteUrl: string): Promise<{ dat
     formData.append('columns[7][name]', '')
     formData.append('columns[7][searchable]', 'true')
     formData.append('columns[7][orderable]', 'false')
-    formData.append('columns[7][search][value]', '')
+    formData.append('columns[7][search][value]', caseSerial || '')
     formData.append('columns[7][search][regex]', 'false')
 
     formData.append('columns[8][data]', 'customers.name')
@@ -603,7 +603,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // No authentication required - this is called from trusted pg_cron
+    // No authentication required - this is called from trusted pg_cron or manually by users
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     const encryptionKey = Deno.env.get('ENCRYPTION_KEY')!
@@ -615,10 +615,32 @@ Deno.serve(async (req) => {
     // Create Supabase client with service role
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
+    // Check if a specific company_id or case_serial was requested (for manual bulk collection)
+    let targetCompanyId = null
+    let targetCaseSerial = null
+    let recordsLimit = 100 // Default limit for cron
+    try {
+      const body = await req.json()
+      targetCompanyId = body.company_id || null
+      targetCaseSerial = body.case_serial || null
+      recordsLimit = body.records_limit || 100 // Allow custom limit
+      if (targetCompanyId) {
+        console.log(`🎯 Target company requested: ${targetCompanyId}`)
+      }
+      if (targetCaseSerial) {
+        console.log(`🎯 Target machine requested: ${targetCaseSerial}`)
+      }
+      if (recordsLimit !== 100) {
+        console.log(`📊 Custom records limit: ${recordsLimit}`)
+      }
+    } catch (e) {
+      // No body or invalid JSON - process all companies (cron mode)
+    }
+
     console.log('🕐 Starting standalone DEX collection...')
 
-    // Get all companies with DEX credentials
-    const { data: credentials, error: credError } = await supabase
+    // Get companies with DEX credentials (optionally filtered by company_id)
+    let query = supabase
       .from('user_credentials')
       .select(`
         company_id,
@@ -630,6 +652,13 @@ Deno.serve(async (req) => {
         )
       `)
       .not('username_encrypted', 'is', null)
+
+    // Filter by company_id if specified (manual collection)
+    if (targetCompanyId) {
+      query = query.eq('company_id', targetCompanyId)
+    }
+
+    const { data: credentials, error: credError } = await query
 
     if (credError) {
       throw new Error(`Failed to fetch credentials: ${credError.message}`)
@@ -662,7 +691,7 @@ Deno.serve(async (req) => {
         }
 
         // Fetch DEX metadata (last 24 hours)
-        const { data: metadata, csrfToken } = await fetchDexMetadata(cookies, siteUrl)
+        const { data: metadata, csrfToken } = await fetchDexMetadata(cookies, siteUrl, targetCaseSerial)
         if (metadata.length === 0) {
           console.log('  ⚠ No DEX metadata found')
           results.push({
@@ -718,6 +747,7 @@ Deno.serve(async (req) => {
         console.log(`  → Found ${existingDexIds.size} existing DEX IDs in database`)
 
         // Filter to only records that are newer than what we have for each machine AND not already saved
+        // UNLESS a specific case_serial was requested (manual Get DEX), then fetch all records for that machine
         const newRecords = metadata.filter(record => {
           const caseSerial = record.devices?.caseSerial
           const dexCreated = record.dexRaw?.created
@@ -725,7 +755,13 @@ Deno.serve(async (req) => {
 
           if (!caseSerial || !dexCreated || !dexId) return false
 
-          // Skip if already in database
+          // If targeting a specific machine, skip deduplication and fetch all records
+          if (targetCaseSerial) {
+            console.log(`  → Including DEX ${dexId} for targeted machine ${caseSerial}`)
+            return true
+          }
+
+          // Skip if already in database (for bulk collection)
           if (existingDexIds.has(String(dexId))) {
             return false
           }
@@ -746,7 +782,7 @@ Deno.serve(async (req) => {
           return recordTimestamp > machine.latestTimestamp
         })
 
-        console.log(`  → Found ${newRecords.length} new DEX records to fetch (after deduplication)`)
+        console.log(`  → Found ${newRecords.length} ${targetCaseSerial ? 'DEX records for targeted machine' : 'new DEX records to fetch (after deduplication)'}`)
 
         if (newRecords.length === 0) {
           results.push({
@@ -888,9 +924,9 @@ Deno.serve(async (req) => {
               dexHistory.push(newEntry)
             }
 
-            // Sort by created date (newest first) and limit to last 100 entries
+            // Sort by created date (newest first) and limit entries
             dexHistory.sort((a, b) => new Date(b.created) - new Date(a.created))
-            const limitedDexHistory = dexHistory.slice(0, 100)
+            const limitedDexHistory = dexHistory.slice(0, recordsLimit)
 
             // Get the most recent DEX timestamp from the sorted history
             const latestDexTimestamp = limitedDexHistory.length > 0 ? limitedDexHistory[0].created : update.created

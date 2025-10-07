@@ -7,10 +7,14 @@ export default async function handler(req) {
     return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405, headers: { 'Content-Type': 'application/json' } });
   }
 
+  console.log('🔐 /api/cantaloupe/auth called');
+  console.log('🔐 Request headers:', Object.fromEntries(req.headers.entries()));
+  console.log('🔐 Cookie header:', req.headers.get('cookie') ? 'Present' : 'Missing');
+
   // Get user-specific DEX credentials
   const credentials = await getUserDexCredentials(req);
 
-  console.log('Credentials check:', {
+  console.log('🔐 Credentials check:', {
     isConfigured: credentials.isConfigured,
     hasUsername: !!credentials.username,
     hasPassword: !!credentials.password,
@@ -19,7 +23,9 @@ export default async function handler(req) {
   });
 
   if (!credentials.isConfigured || !credentials.username || !credentials.password) {
+    console.error('🔐 Authentication failed - credentials not configured:', credentials.error);
     return new Response(JSON.stringify({
+      success: false,
       error: credentials.error || 'DEX credentials not configured',
       needsConfiguration: true
     }), { status: 400, headers: { 'Content-Type': 'application/json' } });
